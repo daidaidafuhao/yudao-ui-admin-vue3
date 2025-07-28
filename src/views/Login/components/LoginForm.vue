@@ -53,12 +53,13 @@
       >
         <el-form-item>
           <el-row justify="space-between" style="width: 100%">
-            <el-col :span="6">
+            <el-col :span="24">
               <el-checkbox v-model="loginData.loginForm.rememberMe">
                 {{ t('login.remember') }}
               </el-checkbox>
             </el-col>
-            <el-col :offset="6" :span="12">
+            <!-- 隐藏忘记密码链接 -->
+            <!-- <el-col :offset="6" :span="12">
               <el-link
                 class="float-right"
                 type="primary"
@@ -66,7 +67,7 @@
               >
                 {{ t('login.forgetPassword') }}
               </el-link>
-            </el-col>
+            </el-col> -->
           </el-row>
         </el-form-item>
       </el-col>
@@ -89,7 +90,8 @@
         mode="pop"
         @success="handleLogin"
       />
-      <el-col :span="24" class="px-10px">
+      <!-- 隐藏其他登录方式 -->
+      <!-- <el-col :span="24" class="px-10px">
         <el-form-item>
           <el-row :gutter="5" justify="space-between" style="width: 100%">
             <el-col :span="8">
@@ -146,7 +148,7 @@
             </el-link>
           </div>
         </el-form-item>
-      </el-col>
+      </el-col> -->
     </el-row>
   </el-form>
 </template>
