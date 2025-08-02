@@ -2,19 +2,56 @@
   <div class="drone-dashboard">
     <!-- 顶部欢迎区域 -->
     <el-card shadow="never" class="welcome-card">
-        <div class="flex items-center">
-          <el-avatar :src="avatar" :size="70" class="mr-16px">
-            <img src="@/assets/imgs/avatar.gif" alt="" />
-          </el-avatar>
-          <div>
-            <div class="text-20px">
-              {{ t('workplace.welcome') }} {{ username }} {{ t('workplace.happyDay') }}
+        <el-row :gutter="16" justify="space-between">
+          <el-col :xl="12" :lg="12" :md="12" :sm="24" :xs="24">
+            <div class="flex items-center">
+              <el-avatar :src="avatar" :size="70" class="mr-16px">
+                <img src="@/assets/imgs/avatar.gif" alt="" />
+              </el-avatar>
+              <div>
+                <div class="text-20px">
+                  {{ t('workplace.welcome') }} {{ username }} {{ t('workplace.happyDay') }}
+                </div>
+                <div class="mt-10px text-14px text-gray-500">
+                无人机配送系统运行正常，今日已配送 {{ todayDeliveredCount }} 单
+                </div>
+              </div>
             </div>
-            <div class="mt-10px text-14px text-gray-500">
-              欢迎使用无人机配送管理系统
+          </el-col>
+          <el-col :xl="12" :lg="12" :md="12" :sm="24" :xs="24">
+            <div class="h-70px flex items-center justify-end lt-sm:mt-10px">
+              <div class="px-8px text-right">
+              <div class="mb-16px text-14px text-gray-400">在线无人机</div>
+                <CountTo
+                  class="text-20px"
+                  :start-val="0"
+                :end-val="onlineDroneCount"
+                  :duration="2600"
+                />
+              </div>
+              <el-divider direction="vertical" />
+              <div class="px-8px text-right">
+              <div class="mb-16px text-14px text-gray-400">在线柜子</div>
+                <CountTo
+                  class="text-20px"
+                  :start-val="0"
+                :end-val="onlineCabinetCount"
+                  :duration="2600"
+                />
+              </div>
+              <el-divider direction="vertical" border-style="dashed" />
+              <div class="px-8px text-right">
+              <div class="mb-16px text-14px text-gray-400">今日配送</div>
+                <CountTo
+                  class="text-20px"
+                  :start-val="0"
+                :end-val="todayDeliveredCount"
+                  :duration="2600"
+                />
+              </div>
             </div>
-          </div>
-        </div>
+          </el-col>
+        </el-row>
     </el-card>
 
     <!-- 数据统计卡片 -->
@@ -51,10 +88,10 @@
         <el-card shadow="hover" class="stat-card cursor-pointer" @click="router.push('/mall/trade/order')">
           <div class="flex items-center justify-between">
             <div>
-              <div class="text-14px text-gray-500">查看订单</div>
-              <div class="text-24px font-bold mt-5px text-warning">订单管理</div>
+              <div class="text-14px text-gray-500">今日订单</div>
+              <div class="text-24px font-bold mt-5px">{{ orderStats.today }}</div>
               <div class="text-12px text-gray-400 mt-5px">
-                点击查看所有订单
+                配送中 {{ orderStats.delivering }} | 已完成 {{ orderStats.completed }}
               </div>
             </div>
             <el-icon class="text-40px text-warning"><Document /></el-icon>

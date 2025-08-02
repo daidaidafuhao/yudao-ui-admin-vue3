@@ -185,6 +185,16 @@ const remainingRouter: AppRouteRecordRaw[] = [
     }
   },
   {
+    path: '/new-login',
+    component: () => import('@/views/Login/NewLogin.vue'),
+    name: 'NewLogin',
+    meta: {
+      hidden: true,
+      title: '新登录页面',
+      noTagsView: true
+    }
+  },
+  {
     path: '/sso',
     component: () => import('@/views/Login/Login.vue'),
     name: 'SSOLogin',
