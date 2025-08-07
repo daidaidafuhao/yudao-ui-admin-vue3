@@ -471,18 +471,139 @@ const loadDashboardData = async () => {
   }
 }
 
+// 轻量级数据更新 - 只更新统计数据，不重新加载地图
+const updateStatsOnly = async () => {
+  try {
+    // 只更新统计数据，不重新加载完整数据
+    const [droneData, cabinetData, orderData] = await Promise.allSettled([
+      dronesApi.getdronesPage({ pageNo: 1, pageSize: 100 }),
+      CabinetApi.getCabinetPage({ pageNo: 1, pageSize: 100 }),
+      TradeOrderApi.getOrderPage({ pageNo: 1, pageSize: 10, status: 20 })
+    ])
+
+    // 更新无人机数据（保持引用，只更新内容）
+    if (droneData.status === 'fulfilled') {
+      const newDroneList = droneData.value.list || []
+      // 智能更新：只更新变化的数据
+      updateDroneListSmoothly(newDroneList)
+    }
+
+    // 更新柜子数据（保持引用，只更新内容）
+    if (cabinetData.status === 'fulfilled') {
+      const newCabinetList = cabinetData.value.list || []
+      // 智能更新：只更新变化的数据
+      updateCabinetListSmoothly(newCabinetList)
+    }
+
+    // 更新订单数据
+    if (orderData.status === 'fulfilled') {
+      const newOrderList = (orderData.value.list || []).filter(order => 
+        order.logisticsNo?.startsWith('DRONE-')
+      )
+      deliveringOrders.value = newOrderList
+    }
+
+    // 重新计算统计数据
+    updateStats()
+    
+  } catch (error) {
+    console.error('轻量级数据更新失败:', error)
+  }
+}
+
+// 智能更新无人机列表
+const updateDroneListSmoothly = (newDroneList: dronesVO[]) => {
+  // 如果数量变化很大，直接替换
+  if (Math.abs(newDroneList.length - droneList.value.length) > 5) {
+    droneList.value = newDroneList
+    return
+  }
+
+  // 否则逐个更新，保持引用稳定
+  newDroneList.forEach((newDrone, index) => {
+    if (index < droneList.value.length) {
+      // 更新现有对象
+      Object.assign(droneList.value[index], newDrone)
+    } else {
+      // 添加新对象
+      droneList.value.push(newDrone)
+    }
+  })
+
+  // 移除多余的
+  if (droneList.value.length > newDroneList.length) {
+    droneList.value.splice(newDroneList.length)
+  }
+}
+
+// 智能更新柜子列表
+const updateCabinetListSmoothly = (newCabinetList: CabinetVO[]) => {
+  // 如果数量变化很大，直接替换
+  if (Math.abs(newCabinetList.length - cabinetList.value.length) > 5) {
+    cabinetList.value = newCabinetList
+    return
+  }
+
+  // 否则逐个更新，保持引用稳定
+  newCabinetList.forEach((newCabinet, index) => {
+    if (index < cabinetList.value.length) {
+      // 更新现有对象
+      Object.assign(cabinetList.value[index], newCabinet)
+    } else {
+      // 添加新对象
+      cabinetList.value.push(newCabinet)
+    }
+  })
+
+  // 移除多余的
+  if (cabinetList.value.length > newCabinetList.length) {
+    cabinetList.value.splice(newCabinetList.length)
+  }
+}
+
+// 更新统计数据
+const updateStats = () => {
+  // 计算无人机统计
+  droneStats.total = droneList.value.length
+  droneStats.online = droneList.value.filter(d => d.status === 0).length
+  droneStats.flying = droneList.value.filter(d => d.status === 1).length
+  droneStats.error = droneList.value.filter(d => d.status === 5).length
+
+  // 计算柜子统计
+  cabinetStats.total = cabinetList.value.length
+  cabinetStats.online = cabinetList.value.filter(c => c.status === 1).length
+  cabinetStats.available = cabinetList.value.reduce((sum, c) => sum + (c.availableBoxes || 0), 0)
+  cabinetStats.error = cabinetList.value.filter(c => c.status === 2).length
+
+  // 计算订单统计
+  orderStats.today = deliveringOrders.value.length
+  orderStats.delivering = deliveringOrders.value.length
+  orderStats.completed = deliveringOrders.value.filter(order => order.status === 30).length
+  systemStats.error = droneStats.error + cabinetStats.error
+  systemStats.maintenance = droneList.value.filter(d => d.status === 4).length
+}
+
 // 定时刷新
 let refreshTimer: NodeJS.Timeout | null = null
+let statsTimer: NodeJS.Timeout | null = null
 
 onMounted(() => {
+  // 首次加载完整数据
   loadDashboardData()
-  // 每30秒刷新一次数据
-  refreshTimer = setInterval(loadDashboardData, 30000)
+  
+  // 每30秒进行轻量级数据更新（只更新统计数据，不影响地图）
+  statsTimer = setInterval(updateStatsOnly, 30000)
+  
+  // 每5分钟进行一次完整数据刷新（包括地图）
+  refreshTimer = setInterval(loadDashboardData, 300000)
 })
 
 onUnmounted(() => {
   if (refreshTimer) {
     clearInterval(refreshTimer)
+  }
+  if (statsTimer) {
+    clearInterval(statsTimer)
   }
 })
 </script>

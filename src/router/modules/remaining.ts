@@ -71,6 +71,78 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path: '/drone',
+    component: Layout,
+    name: 'DroneSystem',
+    redirect: '/drone/overview',
+    meta: {
+      title: '无人机管理系统',
+      icon: 'ep:monitor'
+    },
+    children: [
+      {
+        path: 'overview',
+        component: () => import('@/views/drone/overview/index.vue'),
+        name: 'DroneOverview',
+        meta: {
+          title: '首页总览',
+          icon: 'ep:data-board',
+          noCache: false
+        }
+      },
+      {
+        path: 'monitor',
+        component: () => import('@/views/drone/monitor/index.vue'),
+        name: 'DroneMonitor',
+        meta: {
+          title: '飞行监控',
+          icon: 'ep:monitor',
+          noCache: false
+        }
+      },
+      {
+        path: 'video',
+        component: () => import('@/views/drone/video/index.vue'),
+        name: 'DroneVideo',
+        meta: {
+          title: '视频墙',
+          icon: 'ep:video-play',
+          noCache: false
+        }
+      },
+      {
+        path: 'task',
+        component: () => import('@/views/drone/task/index.vue'),
+        name: 'DroneTask',
+        meta: {
+          title: '任务协同',
+          icon: 'ep:document',
+          noCache: false
+        }
+      },
+      {
+        path: 'route',
+        component: () => import('@/views/drone/route/index.vue'),
+        name: 'DroneRoute',
+        meta: {
+          title: '航线规划',
+          icon: 'ep:location',
+          noCache: false
+        }
+      },
+      {
+        path: 'facility',
+        component: () => import('@/views/drone/facility/index.vue'),
+        name: 'DroneFacility',
+        meta: {
+          title: '低空设施管理',
+          icon: 'ep:setting',
+          noCache: false
+        }
+      }
+    ]
+  },
+  {
     path: '/user',
     component: Layout,
     name: 'UserInfo',

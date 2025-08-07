@@ -4,6 +4,27 @@
     
     <!-- 地图控制面板 -->
     <div class="map-controls">
+      <!-- 地图类型切换 -->
+      <div class="map-type-control">
+        <el-button-group>
+          <el-button 
+            size="small" 
+            :type="mapType === 'vector' ? 'primary' : 'default'"
+            @click="switchMapType('vector')"
+          >
+            标准地图
+          </el-button>
+          <el-button 
+            size="small" 
+            :type="mapType === 'satellite' ? 'primary' : 'default'"
+            @click="switchMapType('satellite')"
+          >
+            卫星地图
+          </el-button>
+        </el-button-group>
+      </div>
+      
+      <!-- 图例 -->
       <div class="control-panel">
         <div class="control-title">图例</div>
         <div class="legend-items">
@@ -26,6 +47,10 @@
           <div class="legend-item">
             <div class="legend-dot cabinet-offline"></div>
             <span>柜子(离线)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot cabinet-error"></div>
+            <span>柜子(故障)</span>
           </div>
         </div>
       </div>
@@ -141,9 +166,13 @@ const selectedCabinet = ref<CabinetVO>()
 let map: any = null
 let droneMarkers: any[] = []
 let cabinetMarkers: any[] = []
+let updateTimeout: NodeJS.Timeout | null = null
 
 // 腾讯地图API密钥
 const MAP_KEY = 'T5MBZ-4XDK3-KQQ3Q-RVDVZ-PBR7E-AMF3R'
+
+// 地图类型
+const mapType = ref<'vector' | 'satellite'>('satellite')
 
 // 状态映射函数
 const getDroneStatusText = (status: number) => {
@@ -208,7 +237,7 @@ const loadMapAPI = (): Promise<void> => {
 
     const script = document.createElement('script')
     script.type = 'text/javascript'
-    script.src = `https://map.qq.com/api/gljs?v=1.exp&key=${MAP_KEY}`
+    script.src = `https://map.qq.com/api/gljs?v=1.exp&key=${MAP_KEY}&libraries=visualization`
     script.onload = () => resolve()
     script.onerror = () => reject(new Error('Failed to load Tencent Map API'))
     document.head.appendChild(script)
@@ -226,8 +255,9 @@ const initMap = async () => {
     map = new window.TMap.Map(mapContainer.value, {
       center: new window.TMap.LatLng(props.center[0], props.center[1]),
       zoom: props.zoom,
-      pitch: 0,
-      rotation: 0
+      baseMap: {  // 设置卫星地图
+        type: 'satellite'
+      }
     })
 
     // 初始化标记点
@@ -276,7 +306,12 @@ const updateMarkers = () => {
             anchor: { x: 16, y: 16 },
             src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(`
               <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#67c23a" stroke="white" stroke-width="2"/>
+                <defs>
+                  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+                  </filter>
+                </defs>
+                <circle cx="16" cy="16" r="14" fill="#67c23a" stroke="white" stroke-width="2" filter="url(#shadow)"/>
                 <text x="16" y="20" text-anchor="middle" fill="white" font-size="16" font-weight="bold">&#x1F681;</text>
               </svg>
             `)))
@@ -287,7 +322,12 @@ const updateMarkers = () => {
             anchor: { x: 16, y: 16 },
             src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(`
               <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#409eff" stroke="white" stroke-width="2"/>
+                <defs>
+                  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+                  </filter>
+                </defs>
+                <circle cx="16" cy="16" r="14" fill="#409eff" stroke="white" stroke-width="2" filter="url(#shadow)"/>
                 <text x="16" y="20" text-anchor="middle" fill="white" font-size="16" font-weight="bold">&#x1F681;</text>
               </svg>
             `)))
@@ -298,7 +338,12 @@ const updateMarkers = () => {
             anchor: { x: 16, y: 16 },
             src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(`
               <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#f56c6c" stroke="white" stroke-width="2"/>
+                <defs>
+                  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+                  </filter>
+                </defs>
+                <circle cx="16" cy="16" r="14" fill="#f56c6c" stroke="white" stroke-width="2" filter="url(#shadow)"/>
                 <text x="16" y="20" text-anchor="middle" fill="white" font-size="16" font-weight="bold">&#x1F681;</text>
               </svg>
             `)))
@@ -348,7 +393,12 @@ const updateMarkers = () => {
             anchor: { x: 14, y: 14 },
             src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(`
               <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
-                <rect x="4" y="4" width="20" height="20" rx="4" fill="#67c23a" stroke="white" stroke-width="2"/>
+                <defs>
+                  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+                  </filter>
+                </defs>
+                <rect x="4" y="4" width="20" height="20" rx="4" fill="#67c23a" stroke="white" stroke-width="2" filter="url(#shadow)"/>
                 <text x="14" y="18" text-anchor="middle" fill="white" font-size="14" font-weight="bold">&#x1F4E6;</text>
               </svg>
             `)))
@@ -359,7 +409,12 @@ const updateMarkers = () => {
             anchor: { x: 14, y: 14 },
             src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(`
               <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
-                <rect x="4" y="4" width="20" height="20" rx="4" fill="#c0c4cc" stroke="white" stroke-width="2"/>
+                <defs>
+                  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+                  </filter>
+                </defs>
+                <rect x="4" y="4" width="20" height="20" rx="4" fill="#c0c4cc" stroke="white" stroke-width="2" filter="url(#shadow)"/>
                 <text x="14" y="18" text-anchor="middle" fill="white" font-size="14" font-weight="bold">&#x1F4E6;</text>
               </svg>
             `)))
@@ -370,7 +425,12 @@ const updateMarkers = () => {
             anchor: { x: 14, y: 14 },
             src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(`
               <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
-                <rect x="4" y="4" width="20" height="20" rx="4" fill="#f56c6c" stroke="white" stroke-width="2"/>
+                <defs>
+                  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+                  </filter>
+                </defs>
+                <rect x="4" y="4" width="20" height="20" rx="4" fill="#f56c6c" stroke="white" stroke-width="2" filter="url(#shadow)"/>
                 <text x="14" y="18" text-anchor="middle" fill="white" font-size="14" font-weight="bold">&#x1F4E6;</text>
               </svg>
             `)))
@@ -402,6 +462,82 @@ const updateMarkers = () => {
   })
 }
 
+// 无感更新标记点位置和状态
+const updateMarkersSmoothly = () => {
+  if (!map) return
+
+  // 更新无人机标记
+  props.drones.forEach((drone, index) => {
+    const existingMarker = droneMarkers.find(marker => 
+      marker.geometries && marker.geometries[0] && marker.geometries[0].id === `drone-${index}`
+    )
+    
+    if (existingMarker && drone.longitude && drone.latitude && drone.longitude !== 0 && drone.latitude !== 0) {
+      // 更新位置
+      existingMarker.setGeometries([{
+        id: `drone-${index}`,
+        styleId: getDroneMarkerStyle(drone.status),
+        position: new window.TMap.LatLng(drone.latitude, drone.longitude),
+        properties: {
+          title: drone.droneName,
+          type: 'drone',
+          index: index
+        }
+      }])
+    }
+  })
+
+  // 更新柜子标记
+  props.cabinets.forEach((cabinet, index) => {
+    const existingMarker = cabinetMarkers.find(marker => 
+      marker.geometries && marker.geometries[0] && marker.geometries[0].id === `cabinet-${index}`
+    )
+    
+    if (existingMarker && cabinet.longitude && cabinet.latitude && cabinet.longitude !== 0 && cabinet.latitude !== 0) {
+      // 更新位置
+      existingMarker.setGeometries([{
+        id: `cabinet-${index}`,
+        styleId: getCabinetMarkerStyle(cabinet.status),
+        position: new window.TMap.LatLng(cabinet.latitude, cabinet.longitude),
+        properties: {
+          title: cabinet.name,
+          type: 'cabinet',
+          index: index
+        }
+      }])
+    }
+  })
+}
+
+// 智能更新：只在数据真正变化时才更新
+const smartUpdateMarkers = () => {
+  if (!map) return
+
+  // 清除之前的定时器
+  if (updateTimeout) {
+    clearTimeout(updateTimeout)
+  }
+
+  // 防抖：延迟100ms执行更新
+  updateTimeout = setTimeout(() => {
+    // 检查是否有新的无人机或柜子需要添加
+    const hasNewDrones = props.drones.length > droneMarkers.length
+    const hasNewCabinets = props.cabinets.length > cabinetMarkers.length
+    
+    // 检查是否有数据被删除
+    const hasRemovedDrones = props.drones.length < droneMarkers.length
+    const hasRemovedCabinets = props.cabinets.length < cabinetMarkers.length
+
+    // 如果有新增或删除，则完全重新创建标记
+    if (hasNewDrones || hasNewCabinets || hasRemovedDrones || hasRemovedCabinets) {
+      updateMarkers()
+    } else {
+      // 否则只更新现有标记的位置和状态
+      updateMarkersSmoothly()
+    }
+  }, 100)
+}
+
 // 获取无人机标记样式
 const getDroneMarkerStyle = (status: number) => {
   const styleMap = {
@@ -426,6 +562,18 @@ const getCabinetMarkerStyle = (status: number) => {
   return styleMap[status] || 'cabinet-offline'
 }
 
+// 切换地图类型
+const switchMapType = (type: 'vector' | 'satellite') => {
+  mapType.value = type
+  if (map) {
+    if (type === 'satellite') {
+      map.setBaseMap({ type: 'satellite' })
+    } else {
+      map.setBaseMap({ type: 'roadmap' })
+    }
+  }
+}
+
 // 清除标记
 const clearMarkers = () => {
   droneMarkers.forEach(marker => marker.setMap(null))
@@ -438,10 +586,10 @@ const clearMarkers = () => {
 watch(() => [props.drones, props.cabinets], () => {
   nextTick(() => {
     if (map) {
-      updateMarkers()
+      smartUpdateMarkers()
     }
   })
-}, { deep: true })
+}, { deep: true, flush: 'post' })
 
 // 监听中心点和缩放级别变化
 watch(() => [props.center, props.zoom], () => {
@@ -459,6 +607,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (updateTimeout) {
+    clearTimeout(updateTimeout)
+  }
   clearMarkers()
   if (map) {
     map.destroy()
@@ -468,7 +619,12 @@ onUnmounted(() => {
 // 声明全局类型
 declare global {
   interface Window {
-    TMap: any
+    TMap: {
+      Map: any
+      LatLng: any
+      MultiMarker: any
+      MarkerStyle: any
+    }
   }
 }
 </script>
@@ -518,43 +674,97 @@ declare global {
   top: 16px;
   right: 16px;
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-type-control {
+  .el-button-group {
+    .el-button {
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      
+      &:first-child {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      &:last-child {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      
+      &.el-button--primary {
+        background: #409eff;
+        color: white;
+      }
+    }
+  }
 }
 
 .control-panel {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-width: 200px;
+  padding: 12px;
+  min-width: 160px;
   
   .control-title {
+    font-size: 14px;
     font-weight: bold;
-    margin-bottom: 12px;
     color: #303133;
+    margin-bottom: 8px;
+    text-align: center;
   }
   
   .legend-items {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-  }
-  
-  .legend-item {
-    display: flex;
-    align-items: center;
-    font-size: 12px;
+    gap: 6px;
     
-    .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      margin-right: 8px;
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #606266;
       
-      &.drone-online { background-color: #67c23a; }
-      &.drone-flying { background-color: #409eff; }
-      &.drone-error { background-color: #f56c6c; }
-      &.cabinet-online { background-color: #67c23a; }
-      &.cabinet-offline { background-color: #c0c4cc; }
+      .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        
+        &.drone-online {
+          background: #67c23a;
+        }
+        
+        &.drone-flying {
+          background: #409eff;
+        }
+        
+        &.drone-error {
+          background: #f56c6c;
+        }
+        
+        &.cabinet-online {
+          background: #67c23a;
+        }
+        
+        &.cabinet-offline {
+          background: #c0c4cc;
+        }
+        
+        &.cabinet-error {
+          background: #f56c6c;
+        }
+      }
     }
   }
 }
