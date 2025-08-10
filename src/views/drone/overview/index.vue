@@ -465,15 +465,36 @@ onUnmounted(() => {
 
       .stat-card,
       .info-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 123, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(0, 123, 255, 0.3);
+        border-radius: 16px;
+        box-shadow: 
+          0 8px 32px rgba(0, 123, 255, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
         transition: all 0.3s;
         max-height: none; /* 移除最大高度限制 */
 
         &:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          box-shadow: 
+            0 12px 32px rgba(0, 123, 255, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        :deep(.el-card__header) {
+          background: rgba(0, 123, 255, 0.1);
+          border-bottom: 1px solid rgba(0, 123, 255, 0.2);
+          border-radius: 16px 16px 0 0;
+          
+          .text-16px {
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          }
+        }
+
+        :deep(.el-card__body) {
+          background: transparent;
         }
       }
     }
@@ -488,14 +509,35 @@ onUnmounted(() => {
     pointer-events: auto;
 
     .info-card {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 123, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 123, 255, 0.3);
+      border-radius: 16px;
+      box-shadow: 
+        0 8px 32px rgba(0, 123, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
       transition: all 0.3s;
 
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        box-shadow: 
+          0 12px 32px rgba(0, 123, 255, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+
+      :deep(.el-card__header) {
+        background: rgba(0, 123, 255, 0.1);
+        border-bottom: 1px solid rgba(0, 123, 255, 0.2);
+        border-radius: 16px 16px 0 0;
+        
+        .text-16px {
+          color: #ffffff;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+      }
+
+      :deep(.el-card__body) {
+        background: transparent;
       }
     }
 
@@ -516,21 +558,23 @@ onUnmounted(() => {
       .report-item {
         width: 100%;
         padding: 10px; /* 稍微增加内边距 */
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(0, 123, 255, 0.3);
+        border-radius: 12px;
+        background: rgba(0, 123, 255, 0.08);
         flex-shrink: 0;
+        backdrop-filter: blur(10px);
         
         .report-title {
           font-size: 14px; /* 稍微增加字体 */
           font-weight: bold;
-          color: #303133;
+          color: #ffffff;
           margin-bottom: 4px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
         
         .report-desc {
           font-size: 12px; /* 稍微增加字体 */
-          color: #909399;
+          color: rgba(255, 255, 255, 0.8);
           margin-bottom: 8px;
           line-height: 1.4;
         }
@@ -539,6 +583,16 @@ onUnmounted(() => {
           padding: 6px 12px; /* 稍微增加按钮内边距 */
           font-size: 12px; /* 稍微增加按钮字体 */
           height: 28px; /* 稍微增加按钮高度 */
+          background: rgba(0, 123, 255, 0.3);
+          border: 1px solid rgba(0, 123, 255, 0.5);
+          color: #ffffff;
+          backdrop-filter: blur(10px);
+          
+          &:hover {
+            background: rgba(0, 123, 255, 0.4);
+            border-color: rgba(0, 123, 255, 0.7);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+          }
         }
       }
     }
@@ -574,7 +628,7 @@ onUnmounted(() => {
       align-items: center;
       justify-content: space-between;
       padding: 6px 0; /* 减少内边距 */
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      border-bottom: 1px solid rgba(0, 123, 255, 0.2);
       
       &:last-child {
         border-bottom: none;
@@ -582,19 +636,20 @@ onUnmounted(() => {
       
       .stat-label {
         font-size: 13px; /* 稍微减小字体 */
-        color: #606266;
+        color: rgba(255, 255, 255, 0.8);
       }
       
       .stat-value {
         .number {
           font-size: 15px; /* 稍微减小字体 */
           font-weight: bold;
-          color: #303133;
+          color: #ffffff;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
         
         .unit {
           font-size: 11px; /* 稍微减小字体 */
-          color: #909399;
+          color: rgba(255, 255, 255, 0.6);
           margin-left: 4px;
         }
       }
@@ -602,14 +657,15 @@ onUnmounted(() => {
       .stat-rate {
         .rate-label {
           font-size: 11px; /* 稍微减小字体 */
-          color: #909399;
+          color: rgba(255, 255, 255, 0.6);
         }
         
         .rate-value {
           font-size: 13px; /* 稍微减小字体 */
-          color: #67c23a;
+          color: #00d4ff;
           font-weight: bold;
           margin-left: 4px;
+          text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
         }
       }
     }
@@ -620,7 +676,7 @@ onUnmounted(() => {
       display: flex;
       align-items: center;
       padding: 4px 0; /* 减少内边距 */
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      border-bottom: 1px solid rgba(0, 123, 255, 0.2);
       
       &:last-child {
         border-bottom: none;
@@ -630,12 +686,12 @@ onUnmounted(() => {
         flex: 1;
         margin-left: 6px; /* 减少左边距 */
         font-size: 12px; /* 稍微减小字体 */
-        color: #606266;
+        color: rgba(255, 255, 255, 0.8);
       }
       
       .warning-time {
         font-size: 10px; /* 稍微减小字体 */
-        color: #909399;
+        color: rgba(255, 255, 255, 0.6);
       }
     }
   }
@@ -643,7 +699,7 @@ onUnmounted(() => {
   .log-list {
     .log-item {
       padding: 4px 0; /* 减少内边距 */
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      border-bottom: 1px solid rgba(0, 123, 255, 0.2);
       
       &:last-child {
         border-bottom: none;
@@ -651,18 +707,19 @@ onUnmounted(() => {
       
       .log-time {
         font-size: 10px; /* 稍微减小字体 */
-        color: #909399;
+        color: rgba(255, 255, 255, 0.6);
       }
       
       .log-content {
         font-size: 12px; /* 稍微减小字体 */
-        color: #606266;
+        color: rgba(255, 255, 255, 0.8);
         margin: 1px 0; /* 减少边距 */
       }
       
       .log-user {
         font-size: 10px; /* 稍微减小字体 */
-        color: #409eff;
+        color: #00d4ff;
+        text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
       }
     }
   }
@@ -677,8 +734,10 @@ onUnmounted(() => {
       align-items: center;
       gap: 8px; /* 减少间距 */
       padding: 8px; /* 减少内边距 */
-      border-radius: 6px; /* 稍微减小圆角 */
-      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px; /* 稍微减小圆角 */
+      background: rgba(0, 123, 255, 0.08);
+      border: 1px solid rgba(0, 123, 255, 0.2);
+      backdrop-filter: blur(10px);
       
       .stat-icon {
         font-size: 20px; /* 稍微减小图标 */
@@ -687,8 +746,10 @@ onUnmounted(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 6px; /* 稍微减小圆角 */
-        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px; /* 稍微减小圆角 */
+        background: rgba(0, 123, 255, 0.2);
+        border: 1px solid rgba(0, 123, 255, 0.3);
+        color: #ffffff;
       }
       
       .stat-content {
@@ -697,13 +758,14 @@ onUnmounted(() => {
         .stat-value {
           font-size: 16px; /* 稍微减小字体 */
           font-weight: bold;
-          color: #303133;
+          color: #ffffff;
           line-height: 1.2;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
         
         .stat-label {
           font-size: 11px; /* 稍微减小字体 */
-          color: #909399;
+          color: rgba(255, 255, 255, 0.7);
           margin-top: 1px; /* 减少顶部边距 */
         }
       }

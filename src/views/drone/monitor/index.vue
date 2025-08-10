@@ -515,11 +515,13 @@ onUnmounted(() => {
   left: 20px;
   width: 320px;
   height: calc(100vh - 40px);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  background: rgba(0, 123, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 123, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -527,22 +529,37 @@ onUnmounted(() => {
 
   .list-header {
     padding: 20px 20px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(0, 123, 255, 0.2);
 
     h3 {
       margin: 0 0 16px 0;
       font-size: 18px;
       font-weight: 600;
-      color: #303133;
+      color: #ffffff;
       line-height: 1.2;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .search-box {
       .el-input {
         .el-input__wrapper {
-          background: rgba(255, 255, 255, 0.8);
-          border: 1px solid rgba(0, 0, 0, 0.1);
-          border-radius: 6px;
+          background: rgba(0, 123, 255, 0.1);
+          border: 1px solid rgba(0, 123, 255, 0.4);
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+          
+          &:focus-within {
+            border-color: rgba(0, 123, 255, 0.8);
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+          }
+        }
+        
+        .el-input__inner {
+          color: #ffffff;
+          
+          &::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+          }
         }
       }
     }
@@ -551,12 +568,12 @@ onUnmounted(() => {
       margin-top: 16px;
       text-align: center;
       padding: 8px 0;
-      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      border-top: 1px solid rgba(0, 123, 255, 0.2);
       
       .el-switch {
         .el-switch__label {
           font-size: 12px;
-          color: #606266;
+          color: rgba(255, 255, 255, 0.8);
         }
       }
     }
@@ -570,22 +587,27 @@ onUnmounted(() => {
     .drone-item {
       padding: 16px;
       margin-bottom: 12px;
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
+      background: rgba(0, 123, 255, 0.08);
+      border: 1px solid rgba(0, 123, 255, 0.2);
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
 
       &:hover {
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(0, 123, 255, 0.15);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 
+          0 8px 24px rgba(0, 123, 255, 0.3),
+          0 0 0 1px rgba(0, 123, 255, 0.4);
       }
 
       &.active {
-        background: rgba(64, 158, 255, 0.1);
-        border-color: #409eff;
-        box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+        background: rgba(0, 123, 255, 0.2);
+        border-color: rgba(0, 123, 255, 0.8);
+        box-shadow: 
+          0 0 0 2px rgba(0, 123, 255, 0.3),
+          0 8px 24px rgba(0, 123, 255, 0.4);
       }
 
       .drone-info {
@@ -594,14 +616,15 @@ onUnmounted(() => {
         .drone-name {
           font-size: 16px;
           font-weight: 600;
-          color: #303133;
+          color: #ffffff;
           margin-bottom: 6px;
           line-height: 1.2;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
         .drone-code {
           font-size: 12px;
-          color: #909399;
+          color: rgba(255, 255, 255, 0.7);
           margin-bottom: 10px;
           line-height: 1.2;
         }
@@ -611,6 +634,9 @@ onUnmounted(() => {
             font-size: 11px;
             height: 20px;
             line-height: 18px;
+            background: rgba(0, 123, 255, 0.2);
+            border: 1px solid rgba(0, 123, 255, 0.4);
+            color: #ffffff;
           }
         }
       }
@@ -625,12 +651,17 @@ onUnmounted(() => {
           
           .el-progress__bar {
             height: 6px;
+            background: rgba(0, 123, 255, 0.2);
+            
+            .el-progress__inner {
+              background: linear-gradient(90deg, #00d4ff, #0099ff);
+            }
           }
         }
 
         .battery-text {
           font-size: 12px;
-          color: #606266;
+          color: rgba(255, 255, 255, 0.8);
           min-width: 35px;
           text-align: right;
           font-weight: 500;
@@ -646,11 +677,13 @@ onUnmounted(() => {
   right: 20px;
   width: 400px;
   height: calc(100vh - 40px);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  background: rgba(0, 123, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 123, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   z-index: 10;
   padding: 24px;
   overflow-y: auto;
@@ -661,14 +694,15 @@ onUnmounted(() => {
     align-items: center;
     margin-bottom: 28px;
     padding-bottom: 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(0, 123, 255, 0.2);
 
     h3 {
       margin: 0;
       font-size: 20px;
       font-weight: 600;
-      color: #303133;
+      color: #ffffff;
       line-height: 1.2;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
   }
 
@@ -688,7 +722,7 @@ onUnmounted(() => {
 
       .metric-label {
         font-size: 14px;
-        color: #606266;
+        color: rgba(255, 255, 255, 0.8);
         margin-bottom: 8px;
         width: 100%;
       }
@@ -696,19 +730,21 @@ onUnmounted(() => {
       .metric-value {
         font-size: 20px;
         font-weight: 600;
-        color: #303133;
+        color: #ffffff;
         margin-bottom: 12px;
         width: 100%;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
 
       .metric-bar {
         position: relative;
         width: 20px;
         height: 120px;
-        background: rgba(0, 0, 0, 0.1);
+        background: rgba(0, 123, 255, 0.2);
         border-radius: 10px;
         margin: 0 auto 8px;
         overflow: hidden;
+        border: 1px solid rgba(0, 123, 255, 0.3);
 
         .metric-indicator {
           position: absolute;
@@ -719,18 +755,20 @@ onUnmounted(() => {
           transition: bottom 0.3s ease;
 
           &.altitude {
-            background: #67c23a;
+            background: linear-gradient(90deg, #00d4ff, #0099ff);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
           }
 
           &.speed {
-            background: #e6a23c;
+            background: linear-gradient(90deg, #ffd700, #ffa500);
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
           }
         }
       }
 
       .metric-range {
         font-size: 10px;
-        color: #909399;
+        color: rgba(255, 255, 255, 0.6);
         width: 100%;
       }
     }
@@ -749,7 +787,7 @@ onUnmounted(() => {
       justify-content: space-between;
       align-items: center;
       padding: 12px 0;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-bottom: 1px solid rgba(0, 123, 255, 0.2);
 
       &:last-child {
         border-bottom: none;
@@ -757,18 +795,19 @@ onUnmounted(() => {
 
       .info-label {
         font-size: 14px;
-        color: #606266;
+        color: rgba(255, 255, 255, 0.8);
         flex-shrink: 0;
         margin-right: 16px;
       }
 
       .info-value {
         font-size: 14px;
-        color: #303133;
+        color: #ffffff;
         font-weight: 500;
         text-align: right;
         flex: 1;
         word-break: break-all;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
     }
   }
@@ -790,6 +829,42 @@ onUnmounted(() => {
         flex: 1;
         height: 36px;
         font-size: 14px;
+        background: rgba(0, 123, 255, 0.2);
+        border: 1px solid rgba(0, 123, 255, 0.4);
+        color: #ffffff;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(0, 123, 255, 0.3);
+          border-color: rgba(0, 123, 255, 0.6);
+          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+        &.el-button--primary {
+          background: rgba(0, 123, 255, 0.4);
+          border-color: rgba(0, 123, 255, 0.6);
+        }
+
+        &.el-button--warning {
+          background: rgba(255, 193, 7, 0.4);
+          border-color: rgba(255, 193, 7, 0.6);
+        }
+
+        &.el-button--info {
+          background: rgba(23, 162, 184, 0.4);
+          border-color: rgba(23, 162, 184, 0.6);
+        }
+
+        &.el-button--success {
+          background: rgba(40, 167, 69, 0.4);
+          border-color: rgba(40, 167, 69, 0.6);
+        }
+
+        &.el-button--danger {
+          background: rgba(220, 53, 69, 0.4);
+          border-color: rgba(220, 53, 69, 0.6);
+        }
       }
     }
   }
@@ -801,11 +876,14 @@ onUnmounted(() => {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
+  background: rgba(0, 123, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 16px;
   padding: 40px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 
+    0 8px 32px rgba(0, 123, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 // 滚动条样式
@@ -816,17 +894,17 @@ onUnmounted(() => {
 
 .drone-list::-webkit-scrollbar-track,
 .detail-card::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 123, 255, 0.1);
   border-radius: 3px;
 }
 
 .drone-list::-webkit-scrollbar-thumb,
 .detail-card::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 123, 255, 0.4);
   border-radius: 3px;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 123, 255, 0.6);
   }
 }
 </style> 
