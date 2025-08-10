@@ -3,26 +3,7 @@
     <div ref="mapContainer" class="map-wrapper"></div>
     
     <!-- 地图控制面板 -->
-    <div class="map-controls">
-      <!-- 地图类型切换 -->
-      <div class="map-type-control">
-        <el-button-group>
-          <el-button 
-            size="small" 
-            :type="mapType === 'vector' ? 'primary' : 'default'"
-            @click="switchMapType('vector')"
-          >
-            标准地图
-          </el-button>
-          <el-button 
-            size="small" 
-            :type="mapType === 'satellite' ? 'primary' : 'default'"
-            @click="switchMapType('satellite')"
-          >
-            卫星地图
-          </el-button>
-        </el-button-group>
-      </div>
+    <div v-if="props.showControls" class="map-controls">
       
       <!-- 图例 -->
       <div class="control-panel">
@@ -149,11 +130,13 @@ interface Props {
   cabinets: CabinetVO[]
   center?: [number, number]
   zoom?: number
+  showControls?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   center: () => [39.90923, 116.397428], // 默认北京坐标 [纬度, 经度]
-  zoom: 12
+  zoom: 12,
+  showControls: true
 })
 
 const mapContainer = ref<HTMLElement>()
@@ -574,6 +557,14 @@ const switchMapType = (type: 'vector' | 'satellite') => {
   }
 }
 
+// 移动地图到指定无人机位置
+const moveToDrone = (longitude: number, latitude: number, zoom: number = 15) => {
+  if (map && longitude && latitude) {
+    map.setCenter(new window.TMap.LatLng(latitude, longitude))
+    map.setZoom(zoom)
+  }
+}
+
 // 清除标记
 const clearMarkers = () => {
   droneMarkers.forEach(marker => marker.setMap(null))
@@ -614,6 +605,11 @@ onUnmounted(() => {
   if (map) {
     map.destroy()
   }
+})
+
+// 暴露方法给父组件
+defineExpose({
+  moveToDrone
 })
 
 // 声明全局类型
