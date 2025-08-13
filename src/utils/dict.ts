@@ -244,5 +244,8 @@ export enum DICT_TYPE {
   IOT_PLUGIN_STATUS = 'iot_plugin_status', // IOT 插件状态
   IOT_PLUGIN_TYPE = 'iot_plugin_type', // IOT 插件类型
   IOT_DATA_BRIDGE_DIRECTION_ENUM = 'iot_data_bridge_direction_enum', // 桥梁方向
-  IOT_DATA_BRIDGE_TYPE_ENUM = 'iot_data_bridge_type_enum' // 桥梁类型
+  IOT_DATA_BRIDGE_TYPE_ENUM = 'iot_data_bridge_type_enum', // 桥梁类型
+
+  // ========== DRONE - 无人机模块  ==========
+  DRONE_TRANSPORT_ITEM_TYPE = 'drone_transport_item_type' // 无人机运输物品类型
 }

@@ -54,74 +54,75 @@
         </el-row>
     </el-card>
 
-    <!-- 数据统计卡片 -->
-    <el-row :gutter="16" class="mt-16px">
-            <el-col :xl="6" :lg="6" :md="12" :sm="12" :xs="24" class="mb-16px">
-        <el-card shadow="hover" class="stat-card cursor-pointer" @click="handleDroneClick">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-14px text-gray-500">无人机总数</div>
-              <div class="text-24px font-bold mt-5px">{{ droneStats.total }}</div>
-              <div class="text-12px text-gray-400 mt-5px">
-                在线 {{ droneStats.online }} | 飞行中 {{ droneStats.flying }}
-              </div>
-  </div>
-            <el-icon class="text-40px text-primary"><Monitor /></el-icon>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :xl="6" :lg="6" :md="12" :sm="12" :xs="24" class="mb-16px">
-        <el-card shadow="hover" class="stat-card cursor-pointer" @click="handleCabinetClick">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-14px text-gray-500">无人机柜总数</div>
-              <div class="text-24px font-bold mt-5px">{{ cabinetStats.total }}</div>
-              <div class="text-12px text-gray-400 mt-5px">
-                在线 {{ cabinetStats.online }} | 可用格口 {{ cabinetStats.available }}
-              </div>
-                </div>
-            <el-icon class="text-40px text-success"><Connection /></el-icon>
-                </div>
-              </el-card>
-            </el-col>
-            <el-col :xl="6" :lg="6" :md="12" :sm="12" :xs="24" class="mb-16px">
-        <el-card shadow="hover" class="stat-card cursor-pointer" @click="router.push('/mall/trade/order')">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-14px text-gray-500">今日订单</div>
-              <div class="text-24px font-bold mt-5px">{{ orderStats.today }}</div>
-              <div class="text-12px text-gray-400 mt-5px">
-                配送中 {{ orderStats.delivering }} | 已完成 {{ orderStats.completed }}
-              </div>
-            </div>
-            <el-icon class="text-40px text-warning"><Document /></el-icon>
-          </div>
-              </el-card>
-            </el-col>
-            <el-col :xl="6" :lg="6" :md="12" :sm="12" :xs="24" class="mb-16px">
-        <el-card shadow="hover" class="stat-card">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-14px text-gray-500">系统状态</div>
-              <div class="text-24px font-bold mt-5px" :class="systemStats.error > 0 ? 'text-danger' : 'text-success'">
-                {{ systemStats.error > 0 ? '异常' : '正常' }}
-              </div>
-              <div class="text-12px text-gray-400 mt-5px">
-                故障 {{ systemStats.error }} | 维护 {{ systemStats.maintenance }}
-              </div>
-            </div>
-            <el-icon class="text-40px" :class="systemStats.error > 0 ? 'text-danger' : 'text-success'">
-              <CircleCheck />
-            </el-icon>
-          </div>
-              </el-card>
-            </el-col>
-          </el-row>
-
     <!-- 主要内容区域 -->
     <el-row :gutter="16" class="mt-16px">
-      <!-- 地图区域 -->
-      <el-col :span="24" class="mb-16px">
+      <!-- 左侧统计卡片 -->
+      <el-col :xl="6" :lg="8" :md="24" :sm="24" :xs="24" class="mb-16px">
+        <div class="stats-sidebar">
+          <!-- 无人机统计卡片 -->
+          <el-card shadow="hover" class="stat-card cursor-pointer mb-16px" @click="handleDroneClick">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-14px text-gray-500">无人机总数</div>
+                <div class="text-24px font-bold mt-5px">{{ droneStats.total }}</div>
+                <div class="text-12px text-gray-400 mt-5px">
+                  在线 {{ droneStats.online }} | 飞行中 {{ droneStats.flying }}
+                </div>
+              </div>
+              <el-icon class="text-40px text-primary"><Monitor /></el-icon>
+            </div>
+          </el-card>
+          
+          <!-- 无人机柜统计卡片 -->
+          <el-card shadow="hover" class="stat-card cursor-pointer mb-16px" @click="handleCabinetClick">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-14px text-gray-500">无人机柜总数</div>
+                <div class="text-24px font-bold mt-5px">{{ cabinetStats.total }}</div>
+                <div class="text-12px text-gray-400 mt-5px">
+                  在线 {{ cabinetStats.online }} | 可用格口 {{ cabinetStats.available }}
+                </div>
+              </div>
+              <el-icon class="text-40px text-success"><Connection /></el-icon>
+            </div>
+          </el-card>
+          
+          <!-- 今日订单统计卡片 -->
+          <el-card shadow="hover" class="stat-card cursor-pointer mb-16px" @click="router.push('/mall/trade/order')">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-14px text-gray-500">今日订单</div>
+                <div class="text-24px font-bold mt-5px">{{ orderStats.today }}</div>
+                <div class="text-12px text-gray-400 mt-5px">
+                  配送中 {{ orderStats.delivering }} | 已完成 {{ orderStats.completed }}
+                </div>
+              </div>
+              <el-icon class="text-40px text-warning"><Document /></el-icon>
+            </div>
+          </el-card>
+          
+          <!-- 系统状态统计卡片 -->
+          <el-card shadow="hover" class="stat-card mb-16px">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-14px text-gray-500">系统状态</div>
+                <div class="text-24px font-bold mt-5px" :class="systemStats.error > 0 ? 'text-danger' : 'text-success'">
+                  {{ systemStats.error > 0 ? '异常' : '正常' }}
+                </div>
+                <div class="text-12px text-gray-400 mt-5px">
+                  故障 {{ systemStats.error }} | 维护 {{ systemStats.maintenance }}
+                </div>
+              </div>
+              <el-icon class="text-40px" :class="systemStats.error > 0 ? 'text-danger' : 'text-success'">
+                <CircleCheck />
+              </el-icon>
+            </div>
+          </el-card>
+        </div>
+      </el-col>
+      
+      <!-- 右侧地图区域 -->
+      <el-col :xl="18" :lg="16" :md="24" :sm="24" :xs="24" class="mb-16px">
         <el-card shadow="never" class="map-card">
         <template #header>
             <div class="flex justify-between items-center">
@@ -625,7 +626,7 @@ onUnmounted(() => {
     
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     }
     
     &.cursor-pointer {
@@ -640,6 +641,43 @@ onUnmounted(() => {
         transform: translateY(0);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
+    }
+  }
+  
+  .stats-sidebar {
+    .stat-card {
+      width: 100%;
+      
+      &:last-child {
+        margin-bottom: 0 !important;
+      }
+    }
+  }
+  
+  // 响应式调整
+  @media (max-width: 1200px) {
+    .stats-sidebar {
+      .stat-card {
+        margin-bottom: 12px;
+      }
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .stats-sidebar {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      
+      .stat-card {
+        margin-bottom: 0;
+      }
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .stats-sidebar {
+      grid-template-columns: 1fr;
     }
   }
 

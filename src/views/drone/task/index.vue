@@ -277,13 +277,278 @@
         </el-descriptions>
       </div>
     </el-dialog>
+
+    <!-- 创建运输单弹窗 -->
+    <el-dialog
+      v-model="createTransportVisible"
+      title="创建运输单"
+      width="800px"
+      :before-close="handleCreateTransportClose"
+    >
+      <el-form
+        ref="transportFormRef"
+        :model="transportForm"
+        :rules="transportFormRules"
+        label-width="120px"
+      >
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="物品名称" prop="itemName">
+              <el-select
+                v-model="transportForm.itemName"
+                placeholder="请选择物品"
+                filterable
+                allow-create
+                @change="handleItemChange"
+              >
+                <el-option
+                  v-for="item in itemOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="物品重量" prop="weight">
+              <el-input-number
+                v-model="transportForm.weight "
+                :min="0.1"
+                :max="50"
+                :precision="1"
+                placeholder="请输入重量"
+                style="width: 100%"
+              >
+                <template #append>kg</template>
+              </el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
+          <el-col :span="24">
+            <el-form-item label="物品描述" prop="itemDescription">
+              <el-input
+                v-model="transportForm.itemDescription"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入物品详细描述"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="航线选择" prop="routeId">
+              <el-select
+                v-model="transportForm.routeId"
+                placeholder="请选择航线"
+                @change="handleRouteChange"
+              >
+                <el-option
+                  v-for="route in routeOptions"
+                  :key="route.id"
+                  :label="`${route.name} (${route.startPoint} → ${route.endPoint})`"
+                  :value="route.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="飞行器" prop="droneId">
+              <el-select
+                v-model="transportForm.droneId"
+                placeholder="请选择飞行器"
+                :disabled="!transportForm.routeId"
+              >
+                <el-option
+                  v-for="drone in availableDrones"
+                  :key="drone.id"
+                  :label="`${drone.name} (载重:${drone.maxWeight}kg)`"
+                  :value="drone.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16" v-if="selectedRoute">
+          <el-col :span="12">
+            <el-form-item label="起始点">
+              <el-input v-model="selectedRoute.startPoint" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="终点">
+              <el-input v-model="selectedRoute.endPoint" disabled />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="优先级" prop="priority">
+              <el-select v-model="transportForm.priority" placeholder="请选择优先级">
+                <el-option label="普通" value="normal" />
+                <el-option label="紧急" value="urgent" />
+                <el-option label="特急" value="critical" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="预计送达时间" prop="estimatedTime">
+              <el-date-picker
+                v-model="transportForm.estimatedTime"
+                type="datetime"
+                placeholder="请选择预计送达时间"
+                style="width: 100%"
+                :disabled-date="disabledDate"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
+          <el-col :span="24">
+            <el-form-item label="备注" prop="remark">
+              <el-input
+                v-model="transportForm.remark"
+                type="textarea"
+                :rows="2"
+                placeholder="请输入备注信息"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="handleCreateTransportClose">取消</el-button>
+          <el-button type="primary" @click="submitTransportTask" :loading="submitLoading">
+            创建任务
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 创建调度单弹窗 -->
+    <el-dialog
+      v-model="createDispatchVisible"
+      title="创建调度单"
+      width="700px"
+      :before-close="handleCreateDispatchClose"
+    >
+      <el-form
+        ref="dispatchFormRef"
+        :model="dispatchForm"
+        :rules="dispatchFormRules"
+        label-width="120px"
+      >
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="航线选择" prop="routeId">
+              <el-select
+                v-model="dispatchForm.routeId"
+                placeholder="请选择航线"
+                @change="handleDispatchRouteChange"
+              >
+                <el-option
+                  v-for="route in routeOptions"
+                  :key="route.id"
+                  :label="`${route.name} (${route.startPoint} → ${route.endPoint})`"
+                  :value="route.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="飞行器" prop="droneId">
+              <el-select
+                v-model="dispatchForm.droneId"
+                placeholder="请选择飞行器"
+                :disabled="!dispatchForm.routeId"
+              >
+                <el-option
+                  v-for="drone in availableDrones"
+                  :key="drone.id"
+                  :label="`${drone.name} (载重:${drone.maxWeight}kg)`"
+                  :value="drone.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16" v-if="selectedDispatchRoute">
+          <el-col :span="12">
+            <el-form-item label="起始点">
+              <el-input v-model="selectedDispatchRoute.startPoint" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="终点">
+              <el-input v-model="selectedDispatchRoute.endPoint" disabled />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="优先级" prop="priority">
+              <el-select v-model="dispatchForm.priority" placeholder="请选择优先级">
+                <el-option label="普通" value="normal" />
+                <el-option label="紧急" value="urgent" />
+                <el-option label="特急" value="critical" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="预计完成时间" prop="estimatedTime">
+              <el-date-picker
+                v-model="dispatchForm.estimatedTime"
+                type="datetime"
+                placeholder="请选择预计完成时间"
+                style="width: 100%"
+                :disabled-date="disabledDate"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
+          <el-col :span="24">
+            <el-form-item label="备注" prop="remark">
+              <el-input
+                v-model="dispatchForm.remark"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入备注信息"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="handleCreateDispatchClose">取消</el-button>
+          <el-button type="primary" @click="submitDispatchTask" :loading="dispatchSubmitLoading">
+            创建任务
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, Refresh } from '@element-plus/icons-vue'
+import { getDictOptions, DICT_TYPE } from '@/utils/dict'
 
 defineOptions({ name: 'DroneTask' })
 
@@ -330,7 +595,7 @@ const transportFilter = reactive({
 const transportPage = reactive({
   current: 1,
   size: 10,
-  total: 100
+  total: 0 // 初始化为0，根据实际数据量设置
 })
 
 // 调度单相关
@@ -358,7 +623,7 @@ const dispatchFilter = reactive({
 const dispatchPage = reactive({
   current: 1,
   size: 10,
-  total: 50
+  total: 0 // 初始化为0，根据实际数据量设置
 })
 
 // 详情弹窗
@@ -366,6 +631,131 @@ const selectedTransportTask = ref<any>(null)
 const selectedDispatchTask = ref<any>(null)
 const transportDetailVisible = ref(false)
 const dispatchDetailVisible = ref(false)
+
+// 创建运输单弹窗
+const createTransportVisible = ref(false)
+const submitLoading = ref(false)
+const transportFormRef = ref()
+const selectedRoute = ref<any>(null)
+
+// 创建调度单弹窗
+const createDispatchVisible = ref(false)
+const dispatchSubmitLoading = ref(false)
+const dispatchFormRef = ref()
+const selectedDispatchRoute = ref<any>(null)
+
+// 运输单表单数据
+const transportForm = reactive({
+  itemName: '',
+  weight: undefined,
+  itemDescription: '',
+  routeId: '',
+  droneId: '',
+  priority: 'normal',
+  estimatedTime: '',
+  remark: ''
+})
+
+// 调度单表单数据
+const dispatchForm = reactive({
+  routeId: '',
+  droneId: '',
+  priority: 'normal',
+  estimatedTime: '',
+  remark: ''
+})
+
+// 表单验证规则
+const transportFormRules = {
+  itemName: [{ required: true, message: '请选择或输入物品名称', trigger: 'change' }],
+  weight: [{ required: true, message: '请输入物品重量', trigger: 'blur' }],
+  itemDescription: [{ required: true, message: '请输入物品描述', trigger: 'blur' }],
+  routeId: [{ required: true, message: '请选择航线', trigger: 'change' }],
+  droneId: [{ required: true, message: '请选择飞行器', trigger: 'change' }],
+  priority: [{ required: true, message: '请选择优先级', trigger: 'change' }],
+  estimatedTime: [{ required: true, message: '请选择预计送达时间', trigger: 'change' }]
+}
+
+const dispatchFormRules = {
+  routeId: [{ required: true, message: '请选择航线', trigger: 'change' }],
+  droneId: [{ required: true, message: '请选择飞行器', trigger: 'change' }],
+  priority: [{ required: true, message: '请选择优先级', trigger: 'change' }],
+  estimatedTime: [{ required: true, message: '请选择预计完成时间', trigger: 'change' }]
+}
+
+// 物品选项
+// 使用字典数据获取运输物品类型选项
+const itemOptions = computed(() => {
+  return getDictOptions(DICT_TYPE.DRONE_TRANSPORT_ITEM_TYPE)
+})
+
+// 航线选项
+const routeOptions = ref([
+  {
+    id: 'RT-001',
+    name: '航线001',
+    startPoint: '北京市朝阳区',
+    endPoint: '北京市海淀区',
+    distance: 15.2,
+    estimatedTime: 25
+  },
+  {
+    id: 'RT-002',
+    name: '航线002',
+    startPoint: '北京市西城区',
+    endPoint: '北京市东城区',
+    distance: 8.5,
+    estimatedTime: 15
+  },
+  {
+    id: 'RT-003',
+    name: '航线003',
+    startPoint: '北京市丰台区',
+    endPoint: '北京市石景山区',
+    distance: 12.8,
+    estimatedTime: 20
+  },
+  {
+    id: 'RT-004',
+    name: '航线004',
+    startPoint: '北京市昌平区',
+    endPoint: '北京市顺义区',
+    distance: 22.3,
+    estimatedTime: 35
+  }
+])
+
+// 可用飞行器
+const availableDrones = ref([
+  {
+    id: 'D-001',
+    name: '飞行器001',
+    maxWeight: 5.0,
+    status: 'available',
+    batteryLevel: 85
+  },
+  {
+    id: 'D-002',
+    name: '飞行器002',
+    maxWeight: 3.5,
+    status: 'available',
+    batteryLevel: 92
+  },
+  {
+    id: 'D-003',
+    name: '飞行器003',
+    maxWeight: 8.0,
+    status: 'available',
+    batteryLevel: 78
+  },
+  {
+    id: 'D-004',
+    name: '飞行器004',
+    maxWeight: 10.0,
+    status: 'available',
+    batteryLevel: 95
+  }
+])
 
 // 状态映射
 const getTaskStatusText = (status: string) => {
@@ -395,38 +785,223 @@ const getTaskStatusType = (status: string) => {
 // 标签页切换
 const handleTabChange = (tab: string) => {
   console.log('切换到标签页:', tab)
+  if (tab === 'transport') {
+    loadTransportTasks()
+  } else if (tab === 'dispatch') {
+    loadDispatchTasks()
+  }
 }
 
 // 创建运输单
 const createTransportTask = () => {
-  ElMessage.success('创建运输单功能开发中...')
+  // 重置表单
+  resetTransportForm()
+  createTransportVisible.value = true
+}
+
+// 重置运输单表单
+const resetTransportForm = () => {
+  Object.assign(transportForm, {
+    itemName: '',
+    weight: undefined,
+    itemDescription: '',
+    routeId: '',
+    droneId: '',
+    priority: 'normal',
+    estimatedTime: '',
+    remark: ''
+  })
+  selectedRoute.value = null
+  transportFormRef.value?.clearValidate()
+}
+
+// 处理物品选择变化
+const handleItemChange = (value: string) => {
+  console.log('选择物品:', value)
+}
+
+// 处理航线选择变化
+const handleRouteChange = (routeId: string) => {
+  const route = routeOptions.value.find(r => r.id === routeId)
+  selectedRoute.value = route
+  // 清空飞行器选择
+  transportForm.droneId = ''
+  console.log('选择航线:', route)
+}
+
+// 处理调度单航线选择变化
+const handleDispatchRouteChange = (routeId: string) => {
+  const route = routeOptions.value.find(r => r.id === routeId)
+  selectedDispatchRoute.value = route
+  // 清空飞行器选择
+  dispatchForm.droneId = ''
+  console.log('选择调度航线:', route)
+}
+
+// 关闭创建运输单弹窗
+const handleCreateTransportClose = () => {
+  createTransportVisible.value = false
+  resetTransportForm()
+}
+
+// 关闭创建调度单弹窗
+const handleCreateDispatchClose = () => {
+  createDispatchVisible.value = false
+  resetDispatchForm()
+}
+
+// 禁用过去的日期
+const disabledDate = (time: Date) => {
+  return time.getTime() < Date.now() - 8.64e7 // 禁用昨天之前的日期
+}
+
+// 提交运输单
+const submitTransportTask = async () => {
+  try {
+    await transportFormRef.value?.validate()
+    
+    submitLoading.value = true
+    
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    // 生成任务编号
+    const taskNo = `T-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(transportTaskList.value.length + 1).padStart(3, '0')}`
+    
+    // 获取选中的航线和飞行器信息
+    const selectedRouteInfo = routeOptions.value.find(r => r.id === transportForm.routeId)
+    const selectedDrone = availableDrones.value.find(d => d.id === transportForm.droneId)
+    
+    // 创建新的运输单
+    const newTask = {
+      id: transportTaskList.value.length + 1,
+      taskNo,
+      itemInfo: `${transportForm.itemName} - ${transportForm.itemDescription}`,
+      weight: transportForm.weight || 0,
+      startPoint: selectedRouteInfo?.startPoint || '',
+      endPoint: selectedRouteInfo?.endPoint || '',
+      routeName: selectedRouteInfo?.name || '',
+      droneName: selectedDrone?.name || '',
+      status: 'pending',
+      priority: transportForm.priority,
+      createTime: new Date().toLocaleString(),
+      estimatedTime: new Date(transportForm.estimatedTime).toLocaleString(),
+      remark: transportForm.remark
+    }
+    
+    // 添加到列表
+    transportTaskList.value.unshift(newTask)
+    
+    // 更新总数
+    transportPage.total = transportTaskList.value.length
+    
+    ElMessage.success('运输单创建成功！')
+    createTransportVisible.value = false
+    resetTransportForm()
+    
+  } catch (error) {
+    console.error('表单验证失败:', error)
+  } finally {
+    submitLoading.value = false
+  }
+}
+
+// 提交调度单
+const submitDispatchTask = async () => {
+  if (!dispatchFormRef.value) return
+  
+  try {
+    dispatchSubmitLoading.value = true
+    
+    // 表单验证
+    await dispatchFormRef.value.validate()
+    
+    // 模拟提交延迟
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    // 生成任务编号
+    const taskNo = `D-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(dispatchTaskList.value.length + 1).padStart(3, '0')}`
+    
+    // 获取选中的航线和飞行器信息
+    const selectedRouteInfo = routeOptions.value.find(r => r.id === dispatchForm.routeId)
+    const selectedDrone = availableDrones.value.find(d => d.id === dispatchForm.droneId)
+    
+    // 创建新的调度单
+    const newTask = {
+      id: dispatchTaskList.value.length + 1,
+      taskNo,
+      routeName: selectedRouteInfo?.name || '',
+      startPoint: selectedRouteInfo?.startPoint || '',
+      endPoint: selectedRouteInfo?.endPoint || '',
+      droneName: selectedDrone?.name || '',
+      status: 'pending',
+      createTime: new Date().toLocaleString(),
+      estimatedTime: new Date(dispatchForm.estimatedTime).toLocaleString()
+    }
+    
+    // 添加到列表
+    dispatchTaskList.value.unshift(newTask)
+    
+    // 更新总数
+    dispatchPage.total = dispatchTaskList.value.length
+    
+    ElMessage.success('调度单创建成功！')
+    createDispatchVisible.value = false
+    resetDispatchForm()
+    
+  } catch (error) {
+    console.error('表单验证失败:', error)
+  } finally {
+    dispatchSubmitLoading.value = false
+  }
 }
 
 // 创建调度单
 const createDispatchTask = () => {
-  ElMessage.success('创建调度单功能开发中...')
+  // 重置表单
+  resetDispatchForm()
+  createDispatchVisible.value = true
+}
+
+// 重置调度单表单
+const resetDispatchForm = () => {
+  Object.assign(dispatchForm, {
+    routeId: '',
+    droneId: '',
+    priority: 'normal',
+    estimatedTime: '',
+    remark: ''
+  })
+  selectedDispatchRoute.value = null
+  dispatchFormRef.value?.clearValidate()
 }
 
 // 运输单搜索
 const searchTransportTasks = () => {
-  console.log('搜索运输单:', transportFilter)
+  transportPage.current = 1 // 重置到第一页
+  loadTransportTasks() // 重新加载数据
 }
 
 const resetTransportFilter = () => {
   transportFilter.status = ''
   transportFilter.keyword = ''
   transportFilter.dateRange = []
+  transportPage.current = 1 // 重置到第一页
+  loadTransportTasks() // 重新加载数据
 }
 
 // 调度单搜索
 const searchDispatchTasks = () => {
-  console.log('搜索调度单:', dispatchFilter)
+  dispatchPage.current = 1 // 重置到第一页
+  loadDispatchTasks() // 重新加载数据
 }
 
 const resetDispatchFilter = () => {
   dispatchFilter.status = ''
   dispatchFilter.keyword = ''
   dispatchFilter.dateRange = []
+  dispatchPage.current = 1 // 重置到第一页
+  loadDispatchTasks() // 重新加载数据
 }
 
 // 查看详情
@@ -484,25 +1059,95 @@ const cancelDispatch = async (row: any) => {
 
 // 刷新数据
 const refreshData = () => {
+  if (activeTab.value === 'transport') {
+    loadTransportTasks()
+  } else if (activeTab.value === 'dispatch') {
+    loadDispatchTasks()
+  }
   ElMessage.success('数据刷新成功')
+}
+
+// 数据加载函数
+const loadTransportTasks = async () => {
+  try {
+    transportLoading.value = true
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // 这里应该调用实际的API，传入分页参数和筛选条件
+    console.log('加载运输单数据:', {
+      page: transportPage.current,
+      size: transportPage.size,
+      filter: transportFilter
+    })
+    
+    // 模拟分页数据处理 - 根据实际数据量设置总数
+    transportPage.total = transportTaskList.value.length
+    
+  } catch (error) {
+    console.error('加载运输单数据失败:', error)
+    ElMessage.error('加载数据失败')
+  } finally {
+    transportLoading.value = false
+  }
+}
+
+const loadDispatchTasks = async () => {
+  try {
+    dispatchLoading.value = true
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // 这里应该调用实际的API，传入分页参数和筛选条件
+    console.log('加载调度单数据:', {
+      page: dispatchPage.current,
+      size: dispatchPage.size,
+      filter: dispatchFilter
+    })
+    
+    // 模拟分页数据处理 - 根据实际数据量设置总数
+    dispatchPage.total = dispatchTaskList.value.length
+    
+  } catch (error) {
+    console.error('加载调度单数据失败:', error)
+    ElMessage.error('加载数据失败')
+  } finally {
+    dispatchLoading.value = false
+  }
 }
 
 // 分页处理
 const handleTransportSizeChange = (val: number) => {
   transportPage.size = val
+  transportPage.current = 1 // 重置到第一页
+  loadTransportTasks() // 重新加载数据
 }
 
 const handleTransportCurrentChange = (val: number) => {
   transportPage.current = val
+  loadTransportTasks() // 重新加载数据
 }
 
 const handleDispatchSizeChange = (val: number) => {
   dispatchPage.size = val
+  dispatchPage.current = 1 // 重置到第一页
+  loadDispatchTasks() // 重新加载数据
 }
 
 const handleDispatchCurrentChange = (val: number) => {
   dispatchPage.current = val
+  loadDispatchTasks() // 重新加载数据
 }
+
+// 组件挂载时初始化数据
+onMounted(() => {
+  // 根据当前激活的标签页加载对应数据
+  if (activeTab.value === 'transport') {
+    loadTransportTasks()
+  } else if (activeTab.value === 'dispatch') {
+    loadDispatchTasks()
+  }
+})
 </script>
 
 <style lang="scss" scoped>
@@ -520,5 +1165,49 @@ const handleDispatchCurrentChange = (val: number) => {
       margin-top: 16px;
     }
   }
+
+  // 创建运输单弹窗样式
+  .el-dialog {
+    .el-form {
+      .el-form-item {
+        margin-bottom: 18px;
+      }
+
+      .el-input-number {
+        width: 100%;
+      }
+
+      .el-select {
+        width: 100%;
+      }
+
+      .el-date-picker {
+        width: 100%;
+      }
+    }
+
+    .dialog-footer {
+      text-align: right;
+      padding-top: 16px;
+      border-top: 1px solid #e4e7ed;
+
+      .el-button {
+        margin-left: 12px;
+      }
+    }
+  }
+
+  // 表单标签样式
+  .el-form-item__label {
+    font-weight: 500;
+    color: #606266;
+  }
+
+  // 禁用输入框样式
+  .el-input.is-disabled .el-input__inner {
+    background-color: #f5f7fa;
+    border-color: #e4e7ed;
+    color: #c0c4cc;
+  }
 }
-</style> 
+</style>
