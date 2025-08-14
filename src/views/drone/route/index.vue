@@ -134,7 +134,7 @@
                  :waypoints="selectedRoute?.waypoints || []"
                  :show-route-path="true"
                  :show-controls="false"
-                 :center="mapCenter"
+                 :center="mapCenter as [number, number]"
                  :zoom="mapZoom"
                  :enable-map-click="mapMode === 'edit'"
                  :enable-waypoint-drag="mapMode === 'edit'"
@@ -256,15 +256,7 @@
             placeholder="请输入航线描述"
           />
         </el-form-item>
-        <el-form-item label="航点图标" prop="waypointIcon">
-          <el-select v-model="routeForm.waypointIcon" placeholder="请选择航点图标">
-            <el-option label="默认圆形" value="circle" />
-            <el-option label="方形" value="square" />
-            <el-option label="三角形" value="triangle" />
-            <el-option label="菱形" value="diamond" />
-            <el-option label="五角星" value="star" />
-          </el-select>
-        </el-form-item>
+
         <el-form-item label="图标颜色" prop="waypointColor">
           <el-color-picker v-model="routeForm.waypointColor" show-alpha />
         </el-form-item>
@@ -321,7 +313,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Location, Search, Refresh } from '@element-plus/icons-vue'
 import DroneMap from '@/components/DroneMap/index.vue'
@@ -523,17 +515,10 @@ const searchRoutes = () => {
   console.log('搜索航线:', searchKeyword.value)
 }
 
-// 重置搜索
-const resetSearch = () => {
-  searchKeyword.value = ''
-  if (selectedRoute.value && !filteredRouteList.value.some(r => r.id === selectedRoute.value.id)) {
-    selectedRoute.value = null
-  }
-  console.log('重置搜索')
-}
+
 
 // 选择航线
-const selectRoute = (route: Route, autoCenter: boolean = false) => {
+const selectRoute = (route: any) => {
   selectedRoute.value = route
   selectedWaypointIndex.value = -1 // 重置选中的航点
   
@@ -963,7 +948,7 @@ const selectedWaypointIndex = ref(-1)
 
 // 切换地图显示
 const toggleMapView = () => {
-  const wasMapVisible = showMap.value
+
   showMap.value = !showMap.value
   
   // 如果地图刚刚显示，且有选中的航线，不自动移动到航线中心
@@ -1008,7 +993,7 @@ const getWaypointRowClass = ({ rowIndex }: { rowIndex: number }) => {
 }
 
 // 航点行点击事件
-const onWaypointRowClick = (row: any, column: any, event: Event) => {
+const onWaypointRowClick = (row: any) => {
   const rowIndex = selectedRoute.value?.waypoints.findIndex(wp => wp === row) ?? -1
   if (rowIndex >= 0) {
     selectedWaypointIndex.value = rowIndex
@@ -1034,7 +1019,7 @@ const onWaypointRowDblClick = (row: any) => {
 
 // 航点点击事件
 const onWaypointClick = (event: any) => {
-  const { index, waypoint } = event
+  const { index } = event
   
   if (!selectedRoute.value) {
     ElMessage.warning('请先选择一个航线')
