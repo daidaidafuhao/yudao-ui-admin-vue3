@@ -923,7 +923,8 @@ watch(() => [props.center, props.zoom], ([newCenter, newZoom]) => {
         }
         if (zoomChanged) {
           map.setZoom(newZoom)
-          lastZoom = newZoom
+          // 确保newZoom是number类型
+          lastZoom = typeof newZoom === 'number' ? newZoom : null
         }
       }
     })
@@ -978,6 +979,10 @@ defineExpose({
 declare global {
   interface Window {
     TMap: {
+      [x: string]:
+      /// <reference types="c:/waibao/yudao-ui-admin-vue3/node_modules/.vue-global-types/vue_3.5_0.d.ts" />
+      any
+      MultiPolyline: any
       Map: any
       LatLng: any
       MultiMarker: any
