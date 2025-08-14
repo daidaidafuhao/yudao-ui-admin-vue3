@@ -305,9 +305,16 @@ const mapCenter = computed((): [number, number] => {
   const minLng = Math.min(...lngs)
   const maxLng = Math.max(...lngs)
   
-  // 计算中心点
+  // 计算中心点，确保返回有效值
   const centerLat = (minLat + maxLat) / 2
   const centerLng = (minLng + maxLng) / 2
+  
+  // 验证计算结果
+  if (isNaN(centerLat) || isNaN(centerLng) || 
+      centerLat < -90 || centerLat > 90 || 
+      centerLng < -180 || centerLng > 180) {
+    return [39.90923, 116.397428] // 返回默认北京坐标
+  }
   
   return [centerLat, centerLng]
 })
@@ -336,12 +343,13 @@ const mapZoom = computed(() => {
   const lngSpan = maxLng - minLng
   const maxSpan = Math.max(latSpan, lngSpan)
   
-  // 根据跨度计算缩放级别
+  // 根据跨度计算缩放级别，确保返回有效值
+  if (maxSpan <= 0 || isNaN(maxSpan)) return 12 // 防止无效值
   if (maxSpan > 1) return 8
   if (maxSpan > 0.1) return 10
   if (maxSpan > 0.01) return 12
   if (maxSpan > 0.001) return 14
-  return 16
+  return Math.min(16, Math.max(8, 16)) // 确保在有效范围内
 })
 
 // 加载数据
@@ -805,4 +813,4 @@ onUnmounted(() => {
     }
   }
 }
-</style> 
+</style>
