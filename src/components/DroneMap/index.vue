@@ -146,6 +146,10 @@ interface Props {
   zoom?: number
   showControls?: boolean
   enableMapClick?: boolean
+  waypointIcon?: string
+  waypointColor?: string
+  pathColor?: string
+  pathWidth?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -156,7 +160,11 @@ const props = withDefaults(defineProps<Props>(), {
   center: () => [39.90923, 116.397428], // 默认北京坐标 [纬度, 经度]
   zoom: 12,
   showControls: true,
-  enableMapClick: false
+  enableMapClick: false,
+  waypointIcon: 'circle',
+  waypointColor: '#1890ff',
+  pathColor: '#52c41a',
+  pathWidth: 3
 })
 
 // 定义事件
@@ -231,6 +239,50 @@ const getCabinetStatusType = (status: number) => {
   return typeMap[status] || 'info'
 }
 
+// 生成航点图标SVG
+const generateWaypointIconSVG = (index: number, icon: string, color: string, action?: string) => {
+  // 基于动作类型的图标映射
+  const actionIcons = {
+    hover: 'circle',      // 悬停 - 圆形
+    photo: 'square',      // 拍照 - 方形
+    landing: 'triangle',  // 精准降落 - 三角形
+    circle: 'diamond'     // 盘旋 - 菱形
+  }
+  
+  // 如果有动作类型，优先使用动作对应的图标
+  const finalIcon = action && actionIcons[action] ? actionIcons[action] : icon
+  
+  const shapes = {
+    circle: `<circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>`,
+    square: `<rect x="2" y="2" width="20" height="20" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>`,
+    triangle: `<polygon points="12,2 22,20 2,20" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>`,
+    diamond: `<polygon points="12,2 22,12 12,22 2,12" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>`,
+    star: `<polygon points="12,2 15,8 22,8 17,13 19,20 12,16 5,20 7,13 2,8 9,8" fill="${color}" stroke="white" stroke-width="2" filter="url(#shadow)"/>`
+  }
+  
+  // 基于动作类型的图标符号
+  const actionSymbols = {
+    hover: '⏸',    // 悬停符号
+    photo: '📷',   // 拍照符号
+    landing: '⬇',  // 降落符号
+    circle: '🔄'   // 盘旋符号
+  }
+  
+  const symbol = action && actionSymbols[action] ? actionSymbols[action] : index
+  
+  return `
+    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
+        </filter>
+      </defs>
+      ${shapes[finalIcon] || shapes.circle}
+      <text x="12" y="16" text-anchor="middle" fill="white" font-size="${action ? '12' : '10'}" font-weight="bold">${symbol}</text>
+    </svg>
+  `
+}
+
 const getBatteryColor = (level: number) => {
   if (level > 60) return '#67c23a'  // 绿色
   if (level > 30) return '#e6a23c'  // 黄色
@@ -257,12 +309,19 @@ const bindMapClickEvent = () => {
     mapClickHandler = (evt: any) => {
       const lat = evt.latLng.getLat()
       const lng = evt.latLng.getLng()
-      console.log('地图点击事件触发:', { lat, lng })
+      const timestamp = new Date().toISOString()
+      console.log(`[${timestamp}] DroneMap地图点击事件触发:`, { 
+        lat, 
+        lng,
+        enableMapClick: props.enableMapClick,
+        eventType: evt.type
+      })
       emit('map-click', {
         lat,
         lng,
         latlng: { lat, lng }
       })
+      console.log(`[${timestamp}] DroneMap已发射map-click事件`)
     }
     map.on('click', mapClickHandler)
   } else {
@@ -542,33 +601,28 @@ const updateMarkers = () => {
     }
   })
 
+
+
   // 添加航点标记
   if (props.waypoints && props.waypoints.length > 0) {
     props.waypoints.forEach((waypoint, index) => {
       if (waypoint.longitude && waypoint.latitude && waypoint.longitude !== 0 && waypoint.latitude !== 0) {
+        const styleId = `waypoint-${index}-${waypoint.action || 'default'}`
         const marker = new window.TMap.MultiMarker({
           map: map,
           styles: {
-            'waypoint': new window.TMap.MarkerStyle({
+            [styleId]: new window.TMap.MarkerStyle({
               width: 24,
               height: 24,
               anchor: { x: 12, y: 12 },
-              src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(`
-                <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
-                    </filter>
-                  </defs>
-                  <circle cx="12" cy="12" r="10" fill="#409eff" stroke="white" stroke-width="2" filter="url(#shadow)"/>
-                  <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${waypoint.index || (index + 1)}</text>
-                </svg>
-              `)))
+              src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(
+                generateWaypointIconSVG(waypoint.index || (index + 1), props.waypointIcon, props.waypointColor, waypoint.action)
+              )))
             })
           },
           geometries: [{
             id: `waypoint-${index}`,
-            styleId: 'waypoint',
+            styleId: styleId,
             position: new window.TMap.LatLng(waypoint.latitude, waypoint.longitude),
             properties: {
               title: waypoint.name,
@@ -620,8 +674,8 @@ const updateMarkers = () => {
           map: map,
           styles: {
             'route-path': new window.TMap.PolylineStyle({
-              color: '#409eff',
-              width: 3,
+              color: props.pathColor,
+              width: props.pathWidth,
               borderColor: '#ffffff',
               borderWidth: 1,
               lineCap: 'round'
@@ -691,10 +745,25 @@ const updateMarkersSmoothly = () => {
     )
     
     if (existingMarker && waypoint.longitude && waypoint.latitude && waypoint.longitude !== 0 && waypoint.latitude !== 0) {
-      // 更新位置
+      // 为每个航点创建独特的样式ID，包含动作信息
+      const styleId = `waypoint-${index}-${waypoint.action || 'default'}`
+      
+      // 更新样式（基于动作的图标）
+      existingMarker.setStyles({
+        [styleId]: new window.TMap.MarkerStyle({
+          width: 24,
+          height: 24,
+          anchor: { x: 12, y: 12 },
+          src: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(
+            generateWaypointIconSVG(waypoint.index || (index + 1), props.waypointIcon, props.waypointColor, waypoint.action)
+          )))
+        })
+      })
+      
+      // 更新位置和样式ID
       existingMarker.setGeometries([{
         id: `waypoint-${index}`,
-        styleId: 'waypoint',
+        styleId: styleId,
         position: new window.TMap.LatLng(waypoint.latitude, waypoint.longitude),
         properties: {
           title: waypoint.name,
@@ -731,7 +800,7 @@ const smartUpdateMarkers = () => {
     if (hasNewDrones || hasNewCabinets || hasNewWaypoints || hasRemovedDrones || hasRemovedCabinets || hasRemovedWaypoints) {
       updateMarkers()
     } else {
-      // 否则只更新现有标记的位置和状态
+      // 更新现有标记的位置和状态（包括航点动作变化时的图标更新）
       updateMarkersSmoothly()
     }
   }, 100)
@@ -803,6 +872,11 @@ watch(() => [props.drones, props.cabinets, props.waypoints], () => {
     }
   })
 }, { deep: true, flush: 'post' })
+
+// 监听样式属性变化
+watch(() => [props.waypointIcon, props.waypointColor, props.pathColor, props.pathWidth], () => {
+  updateMarkers()
+}, { deep: true })
 
 // 监听中心点和缩放级别变化
 let centerUpdateTimeout: NodeJS.Timeout | null = null

@@ -105,7 +105,7 @@
                   :type="mapMode === 'view' ? 'primary' : 'default'"
                   @click="setMapMode('view')"
                 >
-                  查看模式
+                  编辑模式
                 </el-button>
                 <el-button
                   size="small"
@@ -113,7 +113,7 @@
                   @click="setMapMode('edit')"
                   :disabled="!selectedRoute"
                 >
-                  编辑模式
+                  创建模式
                 </el-button>
                 <el-button
                   size="small"
@@ -133,10 +133,15 @@
                  :cabinets="[]"
                  :waypoints="selectedRoute?.waypoints || []"
                  :show-route-path="true"
+                 :show-controls="false"
                  :center="mapCenter"
                  :zoom="mapZoom"
                  :enable-map-click="mapMode === 'edit'"
                  :enable-waypoint-drag="mapMode === 'edit'"
+                 :waypoint-icon="selectedRoute?.waypointIcon || 'circle'"
+                 :waypoint-color="selectedRoute?.waypointColor || '#1890ff'"
+                 :path-color="selectedRoute?.pathColor || '#52c41a'"
+                 :path-width="selectedRoute?.pathWidth || 3"
                  @map-click="onMapClick"
                  @waypoint-drag="onWaypointDrag"
                  @waypoint-click="onWaypointClick"
@@ -250,6 +255,24 @@
             :rows="3"
             placeholder="请输入航线描述"
           />
+        </el-form-item>
+        <el-form-item label="航点图标" prop="waypointIcon">
+          <el-select v-model="routeForm.waypointIcon" placeholder="请选择航点图标">
+            <el-option label="默认圆形" value="circle" />
+            <el-option label="方形" value="square" />
+            <el-option label="三角形" value="triangle" />
+            <el-option label="菱形" value="diamond" />
+            <el-option label="五角星" value="star" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="图标颜色" prop="waypointColor">
+          <el-color-picker v-model="routeForm.waypointColor" show-alpha />
+        </el-form-item>
+        <el-form-item label="连线颜色" prop="pathColor">
+          <el-color-picker v-model="routeForm.pathColor" show-alpha />
+        </el-form-item>
+        <el-form-item label="连线宽度" prop="pathWidth">
+          <el-input-number v-model="routeForm.pathWidth" :min="1" :max="10" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -436,7 +459,11 @@ const routeForm = reactive({
   name: '',
   code: '',
   status: 'active',
-  description: ''
+  description: '',
+  waypointIcon: 'circle',
+  waypointColor: '#1890ff',
+  pathColor: '#52c41a',
+  pathWidth: 3
 })
 
 const routeRules = {
@@ -556,6 +583,10 @@ const createRoute = () => {
   routeForm.code = generateRouteCode()
   routeForm.status = 'active'
   routeForm.description = ''
+  routeForm.waypointIcon = 'circle'
+  routeForm.waypointColor = '#1890ff'
+  routeForm.pathColor = '#52c41a'
+  routeForm.pathWidth = 3
   routeDialogVisible.value = true
 }
 
@@ -567,6 +598,10 @@ const editRoute = (route: any) => {
   routeForm.code = route.code
   routeForm.status = route.status
   routeForm.description = route.description
+  routeForm.waypointIcon = route.waypointIcon || 'circle'
+  routeForm.waypointColor = route.waypointColor || '#1890ff'
+  routeForm.pathColor = route.pathColor || '#52c41a'
+  routeForm.pathWidth = route.pathWidth || 3
   routeDialogVisible.value = true
 }
 
@@ -631,6 +666,10 @@ const saveRoute = async () => {
         route.code = routeForm.code
         route.status = routeForm.status
         route.description = routeForm.description
+        route.waypointIcon = routeForm.waypointIcon
+        route.waypointColor = routeForm.waypointColor
+        route.pathColor = routeForm.pathColor
+        route.pathWidth = routeForm.pathWidth
         
         // 更新选中的航线
         if (selectedRoute.value?.id === route.id) {
@@ -647,6 +686,10 @@ const saveRoute = async () => {
         code: routeForm.code,
         status: routeForm.status,
         description: routeForm.description,
+        waypointIcon: routeForm.waypointIcon,
+        waypointColor: routeForm.waypointColor,
+        pathColor: routeForm.pathColor,
+        pathWidth: routeForm.pathWidth,
         distance: 0,
         duration: 0,
         pointCount: 0,
@@ -794,6 +837,12 @@ const saveWaypoint = async () => {
       // 编辑现有航点
       const waypoint = route.waypoints[currentEditWaypointIndex.value]
       Object.assign(waypoint, waypointData)
+      
+      // 同时更新selectedRoute中的航点以触发响应式更新
+      if (selectedRoute.value && selectedRoute.value.waypoints[currentEditWaypointIndex.value]) {
+        Object.assign(selectedRoute.value.waypoints[currentEditWaypointIndex.value], waypointData)
+      }
+      
       ElMessage.success('编辑成功')
     } else {
       // 添加新航点
@@ -802,11 +851,17 @@ const saveWaypoint = async () => {
         index: route.waypoints.length + 1
       }
       route.waypoints.push(newWaypoint)
+      
       ElMessage.success('添加成功')
     }
     
     // 更新统计信息
     updateRouteStats(route)
+    
+    // 强制触发响应式更新
+    if (selectedRoute.value) {
+      selectedRoute.value = { ...selectedRoute.value }
+    }
     
     waypointDialogVisible.value = false
   } catch (error) {
@@ -922,23 +977,26 @@ const setMapMode = (mode: string) => {
 
 // 地图点击事件
 const onMapClick = (event: any) => {
-  console.log('地图点击事件触发:', {
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] 地图点击事件触发:`, {
     mapMode: mapMode.value,
     hasSelectedRoute: !!selectedRoute.value,
-    event: event
+    event: event,
+    clickCount: '第一次检测'
   })
   
   if (mapMode.value === 'edit' && selectedRoute.value) {
-    console.log('地图点击位置:', event.latlng)
+    console.log(`[${timestamp}] 地图点击位置:`, event.latlng)
+    console.log(`[${timestamp}] 准备调用addWaypointFromMap`)
     // 创建新航点
     addWaypointFromMap(event.lat, event.lng)
   } else {
     if (mapMode.value !== 'edit') {
-      console.log('当前不是编辑模式，mapMode:', mapMode.value)
+      console.log(`[${timestamp}] 当前不是编辑模式，mapMode:`, mapMode.value)
       ElMessage.warning('请先切换到编辑模式')
     }
     if (!selectedRoute.value) {
-      console.log('未选择航线')
+      console.log(`[${timestamp}] 未选择航线`)
       ElMessage.warning('请先选择一个航线')
     }
   }
@@ -976,16 +1034,19 @@ const onWaypointRowDblClick = (row: any) => {
 
 // 航点点击事件
 const onWaypointClick = (event: any) => {
-  const { index } = event
-  selectedWaypointIndex.value = index
+  const { index, waypoint } = event
   
-  // 滚动到对应的航点行
-  nextTick(() => {
-    const waypointElement = document.querySelector(`[data-waypoint-index="${index}"]`)
-    if (waypointElement) {
-      waypointElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  })
+  if (!selectedRoute.value) {
+    ElMessage.warning('请先选择一个航线')
+    return
+  }
+  
+  // 直接打开编辑对话框
+  const waypointToEdit = selectedRoute.value.waypoints[index]
+  if (waypointToEdit) {
+    editWaypoint(waypointToEdit, index)
+    waypointDialogVisible.value = true
+  }
 }
 
 // 航点拖拽事件
@@ -1018,12 +1079,22 @@ const onWaypointDrag = (event: any) => {
 
 // 从地图添加航点
 const addWaypointFromMap = (lat: number, lng: number) => {
-  console.log('addWaypointFromMap被调用:', { lat, lng, selectedRoute: !!selectedRoute.value })
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] addWaypointFromMap被调用:`, { 
+    lat, 
+    lng, 
+    selectedRoute: !!selectedRoute.value,
+    currentWaypointCount: selectedRoute.value?.waypoints.length || 0,
+    dialogVisible: waypointDialogVisible.value
+  })
   
   if (!selectedRoute.value) {
+    console.log(`[${timestamp}] 没有选择航线，退出`)
     ElMessage.warning('请先选择一个航线')
     return
   }
+
+
 
   // 重置表单并预填坐标
   waypointForm.name = `航点${selectedRoute.value.waypoints.length + 1}`
@@ -1036,8 +1107,8 @@ const addWaypointFromMap = (lat: number, lng: number) => {
   currentEditWaypointIndex.value = null
   waypointDialogVisible.value = true
   
-  console.log('航点对话框应该显示:', waypointDialogVisible.value)
-  console.log('航点表单数据:', waypointForm)
+  console.log(`[${timestamp}] 航点对话框设置为显示:`, waypointDialogVisible.value)
+  console.log(`[${timestamp}] 航点表单数据:`, waypointForm)
   
   ElMessage.success('已在地图选点位置创建航点，请完善航点信息')
 }
