@@ -389,6 +389,16 @@ const initMap = async () => {
     
     // 绑定地图点击事件（初始化时）
     bindMapClickEvent()
+    
+    // 监听地图移动和缩放事件，更新lastCenter和lastZoom
+    map.on('moveend', () => {
+      const center = map.getCenter()
+      lastCenter = [center.lat, center.lng]
+    })
+    
+    map.on('zoomend', () => {
+      lastZoom = map.getZoom()
+    })
 
     // 初始化标记点
     updateMarkers()
@@ -944,6 +954,12 @@ onUnmounted(() => {
   if (mapClickHandler && map) {
     map.off('click', mapClickHandler)
     mapClickHandler = null
+  }
+  
+  // 清理地图移动和缩放事件监听器
+  if (map) {
+    map.off('moveend')
+    map.off('zoomend')
   }
   
   isMapInitialized = false
