@@ -287,7 +287,6 @@ const loadMapAPI = (): Promise<void> => {
     document.head.appendChild(script)
   })
 }
-
 // 初始化地图
 const initMap = async () => {
   if (!mapContainer.value) return
@@ -562,7 +561,7 @@ const updateMarkers = () => {
                     </filter>
                   </defs>
                   <circle cx="12" cy="12" r="10" fill="#409eff" stroke="white" stroke-width="2" filter="url(#shadow)"/>
-                  <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${waypoint.index + 1}</text>
+                  <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${waypoint.index || (index + 1)}</text>
                 </svg>
               `)))
             })
@@ -576,7 +575,8 @@ const updateMarkers = () => {
               type: 'waypoint',
               index: index
             }
-          }]
+          }],
+          enableDragging: props.enableWaypointDrag
         })
 
         // 添加航点点击事件
@@ -603,9 +603,6 @@ const updateMarkers = () => {
               })
             }
           })
-
-          // 设置标记为可拖拽
-          marker.setDraggable(true)
         }
 
         waypointMarkers.push(marker)
@@ -686,6 +683,27 @@ const updateMarkersSmoothly = () => {
       }])
     }
   })
+
+  // 更新航点标记
+  props.waypoints.forEach((waypoint, index) => {
+    const existingMarker = waypointMarkers.find(marker => 
+      marker.geometries && marker.geometries[0] && marker.geometries[0].id === `waypoint-${index}`
+    )
+    
+    if (existingMarker && waypoint.longitude && waypoint.latitude && waypoint.longitude !== 0 && waypoint.latitude !== 0) {
+      // 更新位置
+      existingMarker.setGeometries([{
+        id: `waypoint-${index}`,
+        styleId: 'waypoint',
+        position: new window.TMap.LatLng(waypoint.latitude, waypoint.longitude),
+        properties: {
+          title: waypoint.name,
+          type: 'waypoint',
+          index: index
+        }
+      }])
+    }
+  })
 }
 
 // 智能更新：只在数据真正变化时才更新
@@ -699,16 +717,18 @@ const smartUpdateMarkers = () => {
 
   // 防抖：延迟100ms执行更新
   updateTimeout = setTimeout(() => {
-    // 检查是否有新的无人机或柜子需要添加
+    // 检查是否有新的无人机、柜子或航点需要添加
     const hasNewDrones = props.drones.length > droneMarkers.length
     const hasNewCabinets = props.cabinets.length > cabinetMarkers.length
+    const hasNewWaypoints = props.waypoints.length > waypointMarkers.length
     
     // 检查是否有数据被删除
     const hasRemovedDrones = props.drones.length < droneMarkers.length
     const hasRemovedCabinets = props.cabinets.length < cabinetMarkers.length
+    const hasRemovedWaypoints = props.waypoints.length < waypointMarkers.length
 
     // 如果有新增或删除，则完全重新创建标记
-    if (hasNewDrones || hasNewCabinets || hasRemovedDrones || hasRemovedCabinets) {
+    if (hasNewDrones || hasNewCabinets || hasNewWaypoints || hasRemovedDrones || hasRemovedCabinets || hasRemovedWaypoints) {
       updateMarkers()
     } else {
       // 否则只更新现有标记的位置和状态
