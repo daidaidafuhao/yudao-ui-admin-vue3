@@ -1,53 +1,85 @@
 <template>
   <div class="drone-route">
-    <el-card shadow="never">
-      <template #header>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <el-icon class="mr-8px"><Location /></el-icon>
-            <span class="text-18px font-bold">航线规划</span>
-          </div>
-          <div class="flex items-center space-x-8px">
-            <el-button type="primary" @click="createRoute">创建航线</el-button>
-            <el-button type="success" @click="importRoute">导入航线</el-button>
-            <el-button @click="exportRoute">导出航线</el-button>
-            <el-button @click="refreshData" :loading="loading">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
-            <el-button @click="toggleMapView" :type="showMap ? 'primary' : 'default'">
-              <el-icon><Location /></el-icon>
-              {{ showMap ? '隐藏地图' : '显示地图' }}
-            </el-button>
-          </div>
+    <!-- 地图背景 -->
+    <div class="map-background">
+      <DroneMap
+        ref="mapRef"
+        :drones="[]"
+        :cabinets="[]"
+        :waypoints="selectedRoute?.waypoints || []"
+        :show-route-path="true"
+        :show-controls="false"
+        :center="mapCenter as [number, number]"
+        :zoom="mapZoom"
+        :enable-map-click="mapMode === 'edit'"
+        :enable-waypoint-drag="mapMode === 'edit'"
+        :waypoint-icon="selectedRoute?.waypointIcon || 'circle'"
+        :waypoint-color="selectedRoute?.waypointColor || '#1890ff'"
+        :path-color="selectedRoute?.pathColor || '#52c41a'"
+        :path-width="selectedRoute?.pathWidth || 3"
+        @map-click="onMapClick"
+        @waypoint-drag="onWaypointDrag"
+        @waypoint-click="onWaypointClick"
+      />
+    </div>
+
+    <!-- 顶部工具栏 -->
+    <div class="top-toolbar">
+      <div class="toolbar-left">
+        <div class="title-section">
+          <el-icon class="title-icon"><Location /></el-icon>
+          <span class="title-text">航线规划</span>
         </div>
-      </template>
-      
-      <div class="route-content">
-        <!-- 主要内容区域 -->
-        <div class="main-content" :class="{ 'with-map': showMap }">
-          <!-- 左侧航线列表 -->
-          <div class="route-list-panel">
-            <div class="panel-header">
-              <h3>航线列表 ({{ filteredRouteList.length }})</h3>
-              <!-- 搜索 -->
-              <div class="search-box">
-                <el-input 
-                  v-model="searchKeyword" 
-                  placeholder="搜索航线名称/编号" 
-                  clearable
-                  @input="searchRoutes"
-                >
-                  <template #prefix>
-                    <el-icon><Search /></el-icon>
-                  </template>
-                </el-input>
-              </div>
-            </div>
-            
-            <!-- 航线列表 -->
-            <div class="route-list">
-              <div 
+      </div>
+      <div class="toolbar-right">
+        <el-button type="primary" @click="createRoute">
+          <el-icon><Plus /></el-icon>
+          创建航线
+        </el-button>
+        <el-button type="success" @click="importRoute">
+          <el-icon><Upload /></el-icon>
+          导入航线
+        </el-button>
+        <el-button @click="exportRoute">
+          <el-icon><Download /></el-icon>
+          导出航线
+        </el-button>
+        <el-button @click="refreshData" :loading="loading">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
+        <el-button @click="toggleWaypointList" :type="showWaypointList ? 'primary' : 'default'">
+          <el-icon><List /></el-icon>
+          {{ showWaypointList ? '隐藏航点列表' : '显示航点列表' }}
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 左侧航线列表卡片 -->
+    <div class="route-list-card" :class="{ hidden: !showWaypointList }">
+      <div class="card-header">
+        <div class="header-title">
+          <el-icon class="title-icon"><List /></el-icon>
+          <span class="title-text">航线列表 ({{ filteredRouteList.length }})</span>
+        </div>
+        <div class="search-box">
+          <el-input 
+            v-model="searchKeyword" 
+            placeholder="搜索航线名称/编号" 
+            clearable
+            size="small"
+            @input="searchRoutes"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
+      </div>
+       
+       <!-- 航线列表 -->
+       <div class="route-list">
+         <div 
                 v-for="route in filteredRouteList" 
                 :key="route.id"
                 class="route-item"
@@ -62,6 +94,13 @@
                   <div class="route-status">
                     <el-tag :type="route.status === 'active' ? 'success' : 'info'" size="small">
                       {{ route.status === 'active' ? '启用' : '禁用' }}
+                    </el-tag>
+                    <el-tag 
+                      :type="validateRoute(route).valid ? 'success' : 'danger'" 
+                      size="small" 
+                      style="margin-left: 4px;"
+                    >
+                      {{ validateRoute(route).valid ? '有效' : '无效' }}
                     </el-tag>
                   </div>
                 </div>
@@ -88,146 +127,47 @@
                   <el-button size="small" type="danger" @click.stop="deleteRoute(route)">删除</el-button>
                 </div>
               </div>
-              <div v-if="filteredRouteList.length === 0" class="empty-state">
-                <el-icon class="empty-icon"><Location /></el-icon>
-                <p>{{ searchKeyword ? '未找到匹配的航线' : '暂无航线数据' }}</p>
-              </div>
-            </div>
           </div>
-
-          <!-- 地图区域 -->
-          <div v-if="showMap" class="map-panel">
-            <div class="panel-header">
-              <h3>航线地图</h3>
-              <div class="map-controls">
-                <el-button
-                  size="small"
-                  :type="mapMode === 'view' ? 'primary' : 'default'"
-                  @click="setMapMode('view')"
-                >
-                  编辑模式
-                </el-button>
-                <el-button
-                  size="small"
-                  :type="mapMode === 'edit' ? 'primary' : 'default'"
-                  @click="setMapMode('edit')"
-                  :disabled="!selectedRoute"
-                >
-                  创建模式
-                </el-button>
-                <el-button
-                  size="small"
-                  type="success"
-                  @click="centerToRoute"
-                  :disabled="!selectedRoute"
-                >
-                  <el-icon><Location /></el-icon>
-                  定位到航线
-                </el-button>
-              </div>
-            </div>
-            <div class="map-container">
-               <DroneMap
-                 ref="mapRef"
-                 :drones="[]"
-                 :cabinets="[]"
-                 :waypoints="selectedRoute?.waypoints || []"
-                 :show-route-path="true"
-                 :show-controls="false"
-                 :center="mapCenter as [number, number]"
-                 :zoom="mapZoom"
-                 :enable-map-click="mapMode === 'edit'"
-                 :enable-waypoint-drag="mapMode === 'edit'"
-                 :waypoint-icon="selectedRoute?.waypointIcon || 'circle'"
-                 :waypoint-color="selectedRoute?.waypointColor || '#1890ff'"
-                 :path-color="selectedRoute?.pathColor || '#52c41a'"
-                 :path-width="selectedRoute?.pathWidth || 3"
-                 @map-click="onMapClick"
-                 @waypoint-drag="onWaypointDrag"
-                 @waypoint-click="onWaypointClick"
-               />
-             </div>
+          <div v-if="filteredRouteList.length === 0" class="empty-state">
+            <el-icon class="empty-icon"><Location /></el-icon>
+            <p>{{ searchKeyword ? '未找到匹配的航线' : '暂无航线数据' }}</p>
           </div>
+      </div>
+    </div>
 
-          <!-- 右侧：详情面板 -->
-          <div class="detail-panel">
-            <div class="panel-header">
-              <h3>航线详情</h3>
-            </div>
-              
-            <div v-if="selectedRoute" class="route-detail">
-              <!-- 航线基本信息 -->
-              <div class="basic-info">
-                <el-descriptions :column="2" border>
-                  <el-descriptions-item label="航线名称">
-                    {{ selectedRoute.name }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="航线编号">
-                    {{ selectedRoute.code }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="状态">
-                    <el-tag :type="selectedRoute.status === 'active' ? 'success' : 'info'">
-                      {{ selectedRoute.status === 'active' ? '启用' : '禁用' }}
-                    </el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="创建时间">
-                    {{ selectedRoute.createTime }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="总距离">
-                    {{ selectedRoute.distance }}km
-                  </el-descriptions-item>
-                  <el-descriptions-item label="预计时长">
-                    {{ selectedRoute.duration }}分钟
-                  </el-descriptions-item>
-                  <el-descriptions-item label="航点数量">
-                    {{ selectedRoute.pointCount }}个
-                  </el-descriptions-item>
-                  <el-descriptions-item label="使用次数">
-                    {{ selectedRoute.usageCount }}次
-                  </el-descriptions-item>
-                </el-descriptions>
-              </div>
-
-              <!-- 航点列表 -->
-              <div class="waypoint-list">
-                <div class="list-header">
-                  <span class="text-16px font-bold">航点列表</span>
-                  <el-button size="small" type="primary" @click="addWaypoint">添加航点</el-button>
-                </div>
-                <el-table 
-                  :data="selectedRoute.waypoints" 
-                  style="width: 100%" 
-                  size="small"
-                  :row-class-name="getWaypointRowClass"
-                  @row-click="onWaypointRowClick"
-                  @row-dblclick="onWaypointRowDblClick"
-                >
-                  <el-table-column prop="index" label="序号" width="60" />
-                  <el-table-column prop="name" label="航点名称" width="120" />
-                  <el-table-column prop="latitude" label="纬度" width="100" />
-                  <el-table-column prop="longitude" label="经度" width="100" />
-                  <el-table-column prop="altitude" label="高度(m)" width="80" />
-                  <el-table-column prop="speed" label="速度(m/s)" width="100" />
-                  <el-table-column prop="action" label="动作" width="120" />
-                  <el-table-column label="操作" width="120">
-                    <template #default="{ row, $index }">
-                      <el-button size="small" @click="editWaypoint(row, $index)">编辑</el-button>
-                      <el-button size="small" type="danger" @click="deleteWaypoint($index)">删除</el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </div>
-            </div>
-
-            <div v-else class="no-route">
-              <el-empty description="请选择航线查看详情">
-                <el-button type="primary" @click="createRoute">创建航线</el-button>
-              </el-empty>
-            </div>
-          </div>
+    <!-- 地图控制卡片 -->
+    <div class="map-controls-card">
+      <div class="controls-title">地图控制</div>
+      <div class="control-buttons">
+        <div 
+          class="control-btn"
+          :class="{ active: mapMode === 'view' }"
+          @click="setMapMode('view')"
+        >
+          <el-icon><View /></el-icon>
+          <span>查看模式</span>
+        </div>
+        <div 
+          class="control-btn"
+          :class="{ active: mapMode === 'edit', disabled: !selectedRoute }"
+          @click="selectedRoute && setMapMode('edit')"
+        >
+          <el-icon><Edit /></el-icon>
+          <span>编辑模式</span>
+        </div>
+        <div 
+          v-if="selectedRoute"
+          class="control-btn"
+          @click="centerToRoute"
+        >
+          <el-icon><Location /></el-icon>
+          <span>定位航线</span>
         </div>
       </div>
-    </el-card>
+    </div>
+
+
+
 
     <!-- 航线编辑弹窗 -->
     <el-dialog
@@ -242,10 +182,46 @@
         <el-form-item label="航线编号" prop="code">
           <el-input v-model="routeForm.code" placeholder="请输入航线编号" />
         </el-form-item>
+        <el-form-item label="飞行器类型" prop="aircraftType">
+          <el-select v-model="routeForm.aircraftType" placeholder="请选择飞行器类型">
+            <el-option label="多旋翼无人机" value="multirotor" />
+            <el-option label="固定翼无人机" value="fixed-wing" />
+            <el-option label="垂直起降无人机" value="vtol" />
+            <el-option label="直升机" value="helicopter" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="routeForm.status" placeholder="请选择状态">
             <el-option label="启用" value="active" />
             <el-option label="禁用" value="inactive" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="起点起降点" prop="takeoffPoint">
+          <el-select v-model="routeForm.takeoffPoint" placeholder="请选择起点起降点" filterable>
+            <el-option 
+              v-for="point in takeoffLandingPoints" 
+              :key="point.code" 
+              :label="`${point.name} (${point.code})`" 
+              :value="point.code" 
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="终点起降点" prop="landingPoint">
+          <el-select v-model="routeForm.landingPoint" placeholder="请选择终点起降点" filterable>
+            <el-option 
+              v-for="point in takeoffLandingPoints" 
+              :key="point.code" 
+              :label="`${point.name} (${point.code})`" 
+              :value="point.code" 
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="航线空域" prop="airspace">
+          <el-select v-model="routeForm.airspace" placeholder="请选择航线空域">
+            <el-option label="适飞空域" value="suitable" />
+            <el-option label="管制空域" value="controlled" />
+            <el-option label="禁飞空域" value="restricted" />
+            <el-option label="临时空域" value="temporary" />
           </el-select>
         </el-form-item>
         <el-form-item label="描述" prop="description">
@@ -303,19 +279,42 @@
             <el-option label="盘旋" value="circle" />
           </el-select>
         </el-form-item>
+        <el-form-item 
+          v-if="waypointForm.action === 'landing'" 
+          label="降落位置编码" 
+          prop="landingCode"
+        >
+          <el-select v-model="waypointForm.landingCode" placeholder="请选择降落位置编码" filterable>
+            <el-option 
+              v-for="code in landingCodes" 
+              :key="code.code" 
+              :label="`${code.name} (${code.code}) - ${code.description}`" 
+              :value="code.code" 
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="waypointDialogVisible = false" :disabled="saving">取消</el-button>
+        <el-button 
+          v-if="currentEditWaypointIndex !== -1" 
+          type="danger" 
+          :icon="Delete" 
+          @click="deleteCurrentWaypoint" 
+          :disabled="saving || (currentEditWaypointIndex !== null && isStartOrEndWaypoint(currentEditWaypointIndex))"
+        >
+          删除
+        </el-button>
         <el-button type="primary" @click="saveWaypoint" :loading="saving">确定</el-button>
       </template>
     </el-dialog>
-  </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Location, Search, Refresh } from '@element-plus/icons-vue'
+import { Location, Search, Refresh, List, View, Edit, InfoFilled, Plus, Upload, Download, Delete } from '@element-plus/icons-vue'
 import DroneMap from '@/components/DroneMap/index.vue'
 
 defineOptions({ name: 'DroneRoute' })
@@ -377,6 +376,38 @@ const routeList = ref(loadRoutesFromStorage())
 // 加载状态
 const loading = ref(false)
 const saving = ref(false)
+
+// 起降点数据
+const takeoffLandingPoints = ref([
+  { code: 'LP001', name: '主起降点A', latitude: 39.90923, longitude: 116.397428, type: 'primary' },
+  { code: 'LP002', name: '备用起降点B', latitude: 39.91923, longitude: 116.407428, type: 'backup' },
+  { code: 'LP003', name: '临时起降点C', latitude: 39.92923, longitude: 116.417428, type: 'temporary' },
+  { code: 'LP004', name: '紧急起降点D', latitude: 39.93923, longitude: 116.427428, type: 'emergency' }
+])
+
+// 降落位置编码数据
+const landingCodes = ref([
+  { code: 'LC001', name: '精准降落点1', description: '主要降落区域' },
+  { code: 'LC002', name: '精准降落点2', description: '备用降落区域' },
+  { code: 'LC003', name: '精准降落点3', description: '紧急降落区域' },
+  { code: 'LC004', name: '精准降落点4', description: '临时降落区域' }
+])
+
+// 计算两点间距离（单位：米）
+const calculateDistance = (point1: any, point2: any) => {
+  const R = 6371000 // 地球半径（米）
+  const lat1 = point1.latitude * Math.PI / 180
+  const lat2 = point2.latitude * Math.PI / 180
+  const deltaLat = (point2.latitude - point1.latitude) * Math.PI / 180
+  const deltaLng = (point2.longitude - point1.longitude) * Math.PI / 180
+  
+  const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+          Math.cos(lat1) * Math.cos(lat2) *
+          Math.sin(deltaLng/2) * Math.sin(deltaLng/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  
+  return R * c
+}
 
 // 生成唯一ID
 const generateId = () => {
@@ -450,6 +481,10 @@ const routeFormRef = ref()
 const routeForm = reactive({
   name: '',
   code: '',
+  aircraftType: '',
+  takeoffPoint: '',
+  landingPoint: '',
+  airspace: 'suitable',
   status: 'active',
   description: '',
   waypointIcon: 'circle',
@@ -461,6 +496,10 @@ const routeForm = reactive({
 const routeRules = {
   name: [{ required: true, message: '请输入航线名称', trigger: 'blur' }],
   code: [{ required: true, message: '请输入航线编号', trigger: 'blur' }],
+  aircraftType: [{ required: true, message: '请选择飞行器类型', trigger: 'change' }],
+  takeoffPoint: [{ required: true, message: '请选择起点起降点', trigger: 'change' }],
+  landingPoint: [{ required: true, message: '请选择终点起降点', trigger: 'change' }],
+  airspace: [{ required: true, message: '请选择航线空域', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }]
 }
 
@@ -475,7 +514,8 @@ const waypointForm = reactive({
   longitude: '',
   altitude: 100,
   speed: 15,
-  action: 'hover'
+  action: 'hover',
+  landingCode: ''
 })
 
 const waypointRules = {
@@ -490,7 +530,19 @@ const waypointRules = {
   ],
   altitude: [{ required: true, message: '请输入高度', trigger: 'blur' }],
   speed: [{ required: true, message: '请输入速度', trigger: 'blur' }],
-  action: [{ required: true, message: '请选择动作', trigger: 'change' }]
+  action: [{ required: true, message: '请选择动作', trigger: 'change' }],
+  landingCode: [
+    { 
+      validator: (rule: any, value: any, callback: any) => {
+        if (waypointForm.action === 'landing' && !value) {
+          callback(new Error('精准降落动作必须选择降落位置编码'))
+        } else {
+          callback()
+        }
+      }, 
+      trigger: 'change' 
+    }
+  ]
 }
 
 // 更新航线统计信息
@@ -566,6 +618,10 @@ const createRoute = () => {
   currentEditRouteId.value = null
   routeForm.name = ''
   routeForm.code = generateRouteCode()
+  routeForm.aircraftType = ''
+  routeForm.takeoffPoint = ''
+  routeForm.landingPoint = ''
+  routeForm.airspace = 'suitable'
   routeForm.status = 'active'
   routeForm.description = ''
   routeForm.waypointIcon = 'circle'
@@ -581,6 +637,10 @@ const editRoute = (route: any) => {
   currentEditRouteId.value = route.id
   routeForm.name = route.name
   routeForm.code = route.code
+  routeForm.aircraftType = route.aircraftType || ''
+  routeForm.takeoffPoint = route.takeoffPoint || ''
+  routeForm.landingPoint = route.landingPoint || ''
+  routeForm.airspace = route.airspace || 'suitable'
   routeForm.status = route.status
   routeForm.description = route.description
   routeForm.waypointIcon = route.waypointIcon || 'circle'
@@ -621,6 +681,21 @@ const deleteRoute = async (route: any) => {
   }
 }
 
+// 航线验证函数
+const validateRoute = (route: any) => {
+  if (!route.waypoints || route.waypoints.length === 0) {
+    return { valid: false, message: '航线至少需要一个航点' }
+  }
+  
+  // 检查最后一个航点是否为降落动作
+  const lastWaypoint = route.waypoints[route.waypoints.length - 1]
+  if (lastWaypoint.action !== 'landing') {
+    return { valid: false, message: '航线最后一个航点必须是降落动作，否则航线无效' }
+  }
+  
+  return { valid: true, message: '' }
+}
+
 // 保存航线
 const saveRoute = async () => {
   if (saving.value) return
@@ -649,12 +724,25 @@ const saveRoute = async () => {
         const route = routeList.value[index]
         route.name = routeForm.name
         route.code = routeForm.code
+        route.aircraftType = routeForm.aircraftType
+        route.takeoffPoint = routeForm.takeoffPoint
+        route.landingPoint = routeForm.landingPoint
+        route.airspace = routeForm.airspace
         route.status = routeForm.status
         route.description = routeForm.description
         route.waypointIcon = routeForm.waypointIcon
         route.waypointColor = routeForm.waypointColor
         route.pathColor = routeForm.pathColor
         route.pathWidth = routeForm.pathWidth
+        
+        // 更新起点和终点航点坐标
+        updateStartEndWaypoints(route)
+        
+        // 重新计算航线统计信息
+        updateRouteStats(route)
+        
+        // 保存到localStorage
+        saveRoutesToStorage(routeList.value)
         
         // 更新选中的航线
         if (selectedRoute.value?.id === route.id) {
@@ -665,10 +753,48 @@ const saveRoute = async () => {
       }
     } else {
       // 创建新航线
+      const waypoints: any[] = []
+      
+      // 如果选择了起降点，自动创建起始和终止航点
+      if (routeForm.takeoffPoint && routeForm.landingPoint) {
+        const takeoffPoint = takeoffLandingPoints.value.find(p => p.code === routeForm.takeoffPoint)
+        const landingPoint = takeoffLandingPoints.value.find(p => p.code === routeForm.landingPoint)
+        
+        if (takeoffPoint) {
+           waypoints.push({
+             index: 1,
+             name: `起始点-${takeoffPoint.name}`,
+             latitude: takeoffPoint.latitude,
+             longitude: takeoffPoint.longitude,
+             altitude: 50,
+             speed: 10,
+             action: 'hover',
+             landingCode: ''
+           })
+         }
+         
+         if (landingPoint) {
+           waypoints.push({
+             index: waypoints.length + 1,
+             name: `终止点-${landingPoint.name}`,
+             latitude: landingPoint.latitude,
+             longitude: landingPoint.longitude,
+             altitude: 20,
+             speed: 5,
+             action: 'landing',
+             landingCode: landingCodes.value[0]?.code || ''
+           })
+         }
+      }
+      
       const newRoute = {
         id: generateId(),
         name: routeForm.name,
         code: routeForm.code,
+        aircraftType: routeForm.aircraftType,
+        takeoffPoint: routeForm.takeoffPoint,
+        landingPoint: routeForm.landingPoint,
+        airspace: routeForm.airspace,
         status: routeForm.status,
         description: routeForm.description,
         waypointIcon: routeForm.waypointIcon,
@@ -677,10 +803,18 @@ const saveRoute = async () => {
         pathWidth: routeForm.pathWidth,
         distance: 0,
         duration: 0,
-        pointCount: 0,
+        pointCount: waypoints.length,
         usageCount: 0,
         createTime: new Date().toLocaleString('zh-CN'),
-        waypoints: []
+        waypoints: waypoints
+      }
+      
+      // 更新起点和终点航点坐标
+      updateStartEndWaypoints(newRoute)
+      
+      // 如果有航点，计算统计信息
+      if (waypoints.length > 0) {
+        updateRouteStats(newRoute)
       }
       
       routeList.value.unshift(newRoute)
@@ -718,10 +852,64 @@ const addWaypoint = () => {
   waypointDialogVisible.value = true
 }
 
+// 判断是否为起点或终点航点
+const isStartOrEndWaypoint = (index: number) => {
+  if (!selectedRoute.value || !selectedRoute.value.waypoints) {
+    return false
+  }
+  
+  const waypoints = selectedRoute.value.waypoints
+  if (waypoints.length === 0) {
+    return false
+  }
+  
+  // 起点：第一个航点且action为hover
+  const isStartPoint = index === 0 && waypoints[0].action === 'hover'
+  
+  // 终点：最后一个航点且action为landing
+  const isEndPoint = index === waypoints.length - 1 && waypoints[waypoints.length - 1].action === 'landing'
+  
+  return isStartPoint || isEndPoint
+}
+
+// 更新起点和终点航点坐标
+const updateStartEndWaypoints = (route: any) => {
+  if (!route.waypoints || route.waypoints.length === 0) {
+    return
+  }
+  
+  // 更新起点航点
+  if (route.takeoffPoint && route.waypoints.length > 0) {
+    const takeoffPoint = takeoffLandingPoints.value.find(p => p.code === route.takeoffPoint)
+    if (takeoffPoint && route.waypoints[0].action === 'hover') {
+      route.waypoints[0].latitude = takeoffPoint.latitude
+      route.waypoints[0].longitude = takeoffPoint.longitude
+      route.waypoints[0].name = `起点-${takeoffPoint.name}`
+    }
+  }
+  
+  // 更新终点航点
+  if (route.landingPoint && route.waypoints.length > 1) {
+    const landingPoint = takeoffLandingPoints.value.find(p => p.code === route.landingPoint)
+    const lastIndex = route.waypoints.length - 1
+    if (landingPoint && route.waypoints[lastIndex].action === 'landing') {
+      route.waypoints[lastIndex].latitude = landingPoint.latitude
+      route.waypoints[lastIndex].longitude = landingPoint.longitude
+      route.waypoints[lastIndex].name = `终点-${landingPoint.name}`
+    }
+  }
+}
+
 // 编辑航点
 const editWaypoint = (waypoint: any, index: number) => {
   if (!selectedRoute.value) {
     ElMessage.warning('请先选择一个航线')
+    return
+  }
+  
+  // 检查是否为起点或终点航点
+  if (isStartOrEndWaypoint(index)) {
+    ElMessage.warning('起点和终点航点不能编辑')
     return
   }
   
@@ -737,10 +925,76 @@ const editWaypoint = (waypoint: any, index: number) => {
   waypointDialogVisible.value = true
 }
 
+// 删除当前编辑的航点
+const deleteCurrentWaypoint = async () => {
+  if (currentEditWaypointIndex.value === null || currentEditWaypointIndex.value === -1) {
+    ElMessage.warning('没有选中的航点')
+    return
+  }
+  
+  if (!selectedRoute.value) {
+    ElMessage.warning('请先选择一个航线')
+    return
+  }
+  
+  // 检查是否为起点或终点航点
+  if (isStartOrEndWaypoint(currentEditWaypointIndex.value)) {
+    ElMessage.warning('起点和终点航点不能删除')
+    return
+  }
+  
+  try {
+    const waypoint = selectedRoute.value.waypoints[currentEditWaypointIndex.value]
+    await ElMessageBox.confirm(
+      `确定要删除航点 "${waypoint.name}" 吗？`,
+      '确认删除',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    // 找到原始航线并删除航点
+    const routeIndex = routeList.value.findIndex(r => r.id === selectedRoute.value!.id)
+    if (routeIndex > -1) {
+      const route = routeList.value[routeIndex]
+      route.waypoints.splice(currentEditWaypointIndex.value, 1)
+      
+      // 重新编号航点
+      route.waypoints.forEach((wp, idx) => {
+        wp.index = idx + 1
+      })
+      
+      // 更新统计信息
+      updateRouteStats(route)
+      
+      // 强制更新selectedRoute以触发地图响应式更新
+      selectedRoute.value = { ...route }
+      
+      // 保存到localStorage
+      saveRoutesToStorage(routeList.value)
+      
+      // 关闭编辑弹窗
+      waypointDialogVisible.value = false
+      
+      ElMessage.success('删除成功')
+    }
+  } catch {
+    // 用户取消
+  }
+}
+
 // 删除航点
 const deleteWaypoint = async (index: number) => {
   if (!selectedRoute.value) {
     ElMessage.warning('请先选择一个航线')
+    return
+  }
+  
+  // 检查是否为起点或终点航点
+  if (isStartOrEndWaypoint(index)) {
+    ElMessage.warning('起点和终点航点不能删除')
     return
   }
   
@@ -770,7 +1024,19 @@ const deleteWaypoint = async (index: number) => {
       // 更新统计信息
       updateRouteStats(route)
       
-      ElMessage.success('删除成功')
+      // 强制更新selectedRoute以触发地图响应式更新
+      selectedRoute.value = { ...route }
+      
+      // 保存到localStorage
+      saveRoutesToStorage(routeList.value)
+      
+      // 验证航线是否有效
+      const validation = validateRoute(route)
+      if (!validation.valid) {
+        ElMessage.warning(validation.message)
+      } else {
+        ElMessage.success('删除成功')
+      }
     }
   } catch {
     // 用户取消
@@ -830,18 +1096,47 @@ const saveWaypoint = async () => {
       
       ElMessage.success('编辑成功')
     } else {
-      // 添加新航点
+      // 添加新航点 - 插入在起点和终点之间
       const newWaypoint = {
         ...waypointData,
         index: route.waypoints.length + 1
       }
-      route.waypoints.push(newWaypoint)
+      
+      // 如果航线有起点和终点，新航点插入在倒数第二个位置（终点前）
+      if (route.waypoints.length >= 2 && 
+          route.waypoints[0].action === 'hover' && 
+          route.waypoints[route.waypoints.length - 1].action === 'landing') {
+        // 插入在终点前
+        route.waypoints.splice(route.waypoints.length - 1, 0, newWaypoint)
+      } else {
+        // 否则添加到末尾
+        route.waypoints.push(newWaypoint)
+      }
+      
+      // 重新编号所有航点
+      route.waypoints.forEach((wp, idx) => {
+        wp.index = idx + 1
+      })
       
       ElMessage.success('添加成功')
     }
     
     // 更新统计信息
     updateRouteStats(route)
+    
+    // 强制更新selectedRoute以触发地图响应式更新
+    if (selectedRoute.value?.id === route.id) {
+      selectedRoute.value = { ...route }
+    }
+    
+    // 验证航线是否有效
+    const validation = validateRoute(route)
+    if (!validation.valid) {
+      ElMessage.warning(validation.message)
+    }
+    
+    // 保存到localStorage
+    saveRoutesToStorage(routeList.value)
     
     // 强制触发响应式更新
     if (selectedRoute.value) {
@@ -940,15 +1235,20 @@ const exportRoute = () => {
 }
 
 // 地图相关
-const showMap = ref(false)
+const showMap = ref(true) // 地图一直显示
+const showWaypointList = ref(true) // 航点列表显示状态
 const mapMode = ref('view')
 const mapCenter = ref([39.90923, 116.397428])
 const mapZoom = ref(10)
 const selectedWaypointIndex = ref(-1)
 
-// 切换地图显示
-const toggleMapView = () => {
+// 切换航点列表显示
+const toggleWaypointList = () => {
+  showWaypointList.value = !showWaypointList.value
+}
 
+// 切换地图显示（保留原函数以防其他地方调用）
+const toggleMapView = () => {
   showMap.value = !showMap.value
   
   // 如果地图刚刚显示，且有选中的航线，不自动移动到航线中心
@@ -1042,6 +1342,12 @@ const onWaypointDrag = (event: any) => {
   
   const { index, lat, lng } = event
   
+  // 检查是否为起点或终点航点
+  if (isStartOrEndWaypoint(index)) {
+    ElMessage.warning('起点和终点航点不能拖拽移动')
+    return
+  }
+  
   // 找到原始航线
   const routeIndex = routeList.value.findIndex(r => r.id === selectedRoute.value!.id)
   if (routeIndex === -1) {
@@ -1057,6 +1363,9 @@ const onWaypointDrag = (event: any) => {
     
     // 更新统计信息
     updateRouteStats(route)
+    
+    // 强制更新selectedRoute以触发地图响应式更新
+    selectedRoute.value = { ...route }
     
     ElMessage.success(`航点 "${route.waypoints[index].name}" 位置已更新`)
   }
@@ -1098,6 +1407,9 @@ const addWaypointFromMap = (lat: number, lng: number) => {
   ElMessage.success('已在地图选点位置创建航点，请完善航点信息')
 }
 
+
+
+
 // 刷新数据
 const refreshData = async () => {
   if (loading.value) return
@@ -1119,108 +1431,214 @@ const refreshData = async () => {
     loading.value = false
   }
 }
+
+// 页面初始化
+onMounted(() => {
+  // 监听页面刷新/关闭事件
+  const handleBeforeUnload = () => {
+    saveRoutesToStorage(routeList.value)
+  }
+  
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  
+  // 清理事件监听器
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+  }
+})
+
+// 离开页面前保存数据
+onBeforeRouteLeave(() => {
+  saveRoutesToStorage(routeList.value)
+  return true
+})
 </script>
 
 <style lang="scss" scoped>
 .drone-route {
-  .route-content {
-    padding: 16px 0;
-  }
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0c1426 0%, #1a2332 100%);
+}
 
-  .main-content {
-    display: flex;
-    gap: 16px;
-    height: calc(100vh - 200px);
-    
-    &.with-map {
-      .route-list-panel {
-        flex: 0 0 300px;
+.map-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.top-toolbar {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  height: 60px;
+  background: rgba(13, 110, 253, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(13, 110, 253, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+
+  .toolbar-left {
+    .title-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
+      .title-icon {
+        font-size: 24px;
+        color: #ffffff;
       }
       
-      .map-panel {
-        flex: 1;
-      }
-      
-      .detail-panel {
-        flex: 0 0 400px;
+      .title-text {
+        font-size: 20px;
+        font-weight: 600;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
     }
+  }
+
+  .toolbar-right {
+    display: flex;
+    gap: 12px;
     
-    &:not(.with-map) {
-      .route-list-panel {
-        flex: 0 0 350px;
+    .el-button {
+      background: rgba(13, 110, 253, 0.2);
+      border: 1px solid rgba(13, 110, 253, 0.4);
+      color: #ffffff;
+      
+      &:hover {
+        background: rgba(13, 110, 253, 0.3);
+        border-color: rgba(13, 110, 253, 0.6);
       }
       
-      .detail-panel {
-        flex: 1;
+      &.el-button--primary {
+        background: rgba(13, 110, 253, 0.8);
+        border-color: rgba(13, 110, 253, 1);
+        
+        &:hover {
+          background: rgba(13, 110, 253, 0.9);
+        }
+      }
+      
+      &.el-button--success {
+        background: rgba(34, 197, 94, 0.8);
+        border-color: rgba(34, 197, 94, 1);
+        
+        &:hover {
+          background: rgba(34, 197, 94, 0.9);
+        }
       }
     }
   }
+}
 
-  .route-list-panel,
-  .map-panel,
-  .detail-panel {
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e4e7ed;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+.route-list-card {
+  position: absolute;
+  top: 100px;
+  left: 20px;
+  width: 360px;
+  max-height: calc(100vh - 140px);
+  background: rgba(13, 110, 253, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(13, 110, 253, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  &.hidden {
+    display: none;
   }
 
-  .panel-header {
-    padding: 16px;
-    border-bottom: 1px solid #e4e7ed;
-    background: #fafafa;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  .card-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(13, 110, 253, 0.2);
     
-    h3 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: bold;
-      color: #303133;
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      
+      .title-icon {
+        font-size: 20px;
+        color: #ffffff;
+      }
+      
+      .title-text {
+        font-size: 18px;
+        font-weight: 600;
+        color: #ffffff;
+      }
     }
     
     .search-box {
-      width: 200px;
-    }
-    
-    .map-controls {
-      display: flex;
-      gap: 8px;
+      :deep(.el-input__wrapper) {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        
+        .el-input__inner {
+          color: #ffffff;
+          
+          &::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+          }
+        }
+      }
     }
   }
 
   .route-list {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
+    padding: 16px 24px 24px;
     
     .route-item {
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
-      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
       margin-bottom: 12px;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.3s ease;
       
       &:hover {
-        border-color: #409eff;
-        box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+        background: rgba(13, 110, 253, 0.1);
+        border-color: rgba(13, 110, 253, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(13, 110, 253, 0.2);
       }
       
       &.active {
-        border-color: #409eff;
-        background: #f0f9ff;
+        background: rgba(13, 110, 253, 0.2);
+        border-color: rgba(13, 110, 253, 0.6);
+        box-shadow: 0 4px 16px rgba(13, 110, 253, 0.3);
       }
       
       .route-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         
         .route-title {
           display: flex;
@@ -1228,9 +1646,9 @@ const refreshData = async () => {
           gap: 8px;
           
           .route-name {
-            font-size: 14px;
-            font-weight: bold;
-            color: #303133;
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
           }
         }
       }
@@ -1238,107 +1656,221 @@ const refreshData = async () => {
       .route-info {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 4px;
-        margin-bottom: 8px;
-        font-size: 12px;
-        color: #606266;
+        gap: 8px;
+        margin-bottom: 12px;
         
         .info-item {
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.8);
+          
+          .info-icon {
+            font-size: 14px;
+            color: rgba(13, 110, 253, 0.8);
+          }
         }
       }
       
       .route-description {
-        font-size: 12px;
-        color: #909399;
-        margin-bottom: 8px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 12px;
         line-height: 1.4;
       }
       
       .route-actions {
         display: flex;
         gap: 8px;
+        
+        .el-button {
+          background: rgba(13, 110, 253, 0.2);
+          border: 1px solid rgba(13, 110, 253, 0.4);
+          color: #ffffff;
+          
+          &:hover {
+            background: rgba(13, 110, 253, 0.3);
+          }
+          
+          &.el-button--danger {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            
+            &:hover {
+              background: rgba(239, 68, 68, 0.3);
+            }
+          }
+        }
       }
     }
     
     .empty-state {
       text-align: center;
-      padding: 40px 20px;
-      color: #909399;
+      padding: 60px 20px;
+      color: rgba(255, 255, 255, 0.6);
       
       .empty-icon {
         font-size: 48px;
         margin-bottom: 16px;
-      }
-    }
-  }
-
-  .map-container {
-    flex: 1;
-    position: relative;
-    min-height: 0; /* 防止flex子项高度计算问题 */
-    
-    .map-placeholder {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #909399;
-      background: #f5f7fa;
-      
-      .map-icon {
-        font-size: 48px;
-        margin-bottom: 16px;
+        color: rgba(13, 110, 253, 0.6);
       }
       
-      .map-text {
+      .empty-text {
         font-size: 16px;
         margin-bottom: 8px;
       }
       
-      .map-desc {
+      .empty-desc {
         font-size: 14px;
+        opacity: 0.8;
       }
     }
   }
+}
 
-  .detail-panel {
-    .route-detail {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      
-      .basic-info {
-        margin-bottom: 24px;
-      }
-    }
+.map-controls-card {
+  position: absolute;
+  top: 100px;
+  right: 20px;
+  width: 200px;
+  background: rgba(13, 110, 253, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(13, 110, 253, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 10;
+  padding: 20px;
+  
+  .controls-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  
+  .control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     
-    .waypoint-list {
-      .list-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
-      }
-      
-      :deep(.waypoint-selected) {
-        background-color: #e6f7ff !important;
-        
-        td {
-          background-color: #e6f7ff !important;
-        }
-      }
-    }
-    
-    .no-route {
-      flex: 1;
+    .control-btn {
+      width: 100%;
+      height: 36px;
+      padding: 8px 16px;
+      background: rgba(13, 110, 253, 0.2);
+      border: 1px solid rgba(13, 110, 253, 0.4);
+      border-radius: 6px;
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+      
+      &:hover {
+        background: rgba(13, 110, 253, 0.3);
+        border-color: rgba(13, 110, 253, 0.6);
+      }
+      
+      &.active {
+        background: rgba(13, 110, 253, 0.8);
+        border-color: rgba(13, 110, 253, 1);
+      }
+      
+      &.disabled {
+        background: rgba(13, 110, 253, 0.1);
+        border-color: rgba(13, 110, 253, 0.2);
+        color: rgba(255, 255, 255, 0.5);
+        cursor: not-allowed;
+        
+        &:hover {
+          background: rgba(13, 110, 253, 0.1);
+          border-color: rgba(13, 110, 253, 0.2);
+        }
+      }
+      
+      .el-icon {
+        font-size: 14px;
+      }
+      
+      span {
+        font-size: 14px;
+        font-weight: 500;
+      }
     }
+  }
+}
+
+
+
+.no-selection {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(13, 110, 253, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(13, 110, 253, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 10;
+  padding: 40px;
+  text-align: center;
+  
+  :deep(.el-empty) {
+    .el-empty__description {
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .el-button {
+      background: rgba(13, 110, 253, 0.8);
+      border-color: rgba(13, 110, 253, 1);
+      color: #ffffff;
+      
+      &:hover {
+        background: rgba(13, 110, 253, 0.9);
+      }
+    }
+  }
+}
+
+// 滚动条样式
+:deep(.el-scrollbar__bar) {
+  .el-scrollbar__thumb {
+    background: rgba(255, 255, 255, 0.2);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+// 对话框样式覆盖
+:deep(.el-dialog) {
+  background: rgba(13, 110, 253, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  
+  .el-dialog__header {
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    
+    .el-dialog__title {
+      color: #ffffff;
+    }
+  }
+  
+  .el-dialog__body {
+    color: rgba(255, 255, 255, 0.9);
   }
 }
 </style>

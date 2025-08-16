@@ -290,8 +290,10 @@ const getBatteryColor = (level: number) => {
   return '#909399'  // 灰色
 }
 
-// 地图点击事件处理器
+// 地图事件处理器
 let mapClickHandler: ((evt: any) => void) | null = null
+let moveEndHandler: (() => void) | null = null
+let zoomEndHandler: (() => void) | null = null
 
 // 绑定地图点击事件
 const bindMapClickEvent = () => {
@@ -391,14 +393,17 @@ const initMap = async () => {
     bindMapClickEvent()
     
     // 监听地图移动和缩放事件，更新lastCenter和lastZoom
-    map.on('moveend', () => {
+    moveEndHandler = () => {
       const center = map.getCenter()
       lastCenter = [center.lat, center.lng]
-    })
-    
-    map.on('zoomend', () => {
+    }
+
+    zoomEndHandler = () => {
       lastZoom = map.getZoom()
-    })
+    }
+
+    map.on('moveend', moveEndHandler)
+    map.on('zoomend', zoomEndHandler)
 
     // 初始化标记点
     updateMarkers()
@@ -783,6 +788,52 @@ const updateMarkersSmoothly = () => {
       }])
     }
   })
+
+  // 更新航线路径
+  if (props.showRoutePath && props.waypoints.length > 1) {
+    const pathPoints = props.waypoints
+      .filter(wp => wp.longitude && wp.latitude && wp.longitude !== 0 && wp.latitude !== 0)
+      .map(wp => new window.TMap.LatLng(wp.latitude, wp.longitude))
+
+    if (pathPoints.length > 1) {
+      // 如果已存在航线路径，先移除
+      if (routePath) {
+        routePath.setMap(null)
+        routePath = null
+      }
+      
+      // 重新创建航线路径
+      routePath = new window.TMap.MultiPolyline({
+        map: map,
+        styles: {
+          'route-path': new window.TMap.PolylineStyle({
+            color: props.pathColor,
+            width: props.pathWidth,
+            borderColor: '#ffffff',
+            borderWidth: 1,
+            lineCap: 'round'
+          })
+        },
+        geometries: [{
+          id: 'route-path',
+          styleId: 'route-path',
+          paths: pathPoints
+        }]
+      })
+    } else {
+      // 如果航点不足，移除航线路径
+      if (routePath) {
+        routePath.setMap(null)
+        routePath = null
+      }
+    }
+  } else {
+    // 如果不显示航线路径，移除现有路径
+    if (routePath) {
+      routePath.setMap(null)
+      routePath = null
+    }
+  }
 }
 
 // 智能更新：只在数据真正变化时才更新
@@ -959,8 +1010,14 @@ onUnmounted(() => {
   
   // 清理地图移动和缩放事件监听器
   if (map) {
-    map.off('moveend')
-    map.off('zoomend')
+    if (moveEndHandler) {
+      map.off('moveend', moveEndHandler)
+      moveEndHandler = null
+    }
+    if (zoomEndHandler) {
+      map.off('zoomend', zoomEndHandler)
+      zoomEndHandler = null
+    }
   }
   
   isMapInitialized = false
